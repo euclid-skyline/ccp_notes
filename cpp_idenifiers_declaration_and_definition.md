@@ -264,8 +264,88 @@ Notes:
 
 > [!NOTE]
 > Forward declarations are also a key API design tool for hiding implementation details from clients.
-> Example: a public header can expose only `struct Config;` and pointers/references to it, while the full struct definition lives in a private source/header file.
-> This hiding gives practical benefits:
+> 
+> Complete example using `struct Config`:
+>
+> `config_api.h` (public header):
+>
+> ```cpp
+> #pragma once
+>
+> #include <string_view>
+>
+> struct Config; // forward declaration: type exists, details hidden
+>
+> // Factory/lifecycle API for opaque Config objects.
+> Config* create_config();
+> void destroy_config(Config* cfg);
+>
+> // Public operations; client can use behavior without seeing struct fields.
+> void set_mode(Config& cfg, std::string_view mode);
+> void set_retries(Config& cfg, int retries);
+> void apply_config(const Config& cfg);
+> ```
+>
+> `config_api.cpp` (implementation):
+>
+> ```cpp
+> #include "config_api.h"
+> #include <iostream>
+> #include <string>
+>
+> // Full definition is private to this source file.
+> struct Config
+> {
+>     std::string mode;
+>     int retries;
+> };
+>
+> Config* create_config()
+> {
+>     return new Config{"safe", 3}; // default internal state
+> }
+>
+> void destroy_config(Config* cfg)
+> {
+>     delete cfg;
+> }
+>
+> void set_mode(Config& cfg, std::string_view mode)
+> {
+>     cfg.mode = std::string(mode);
+> }
+>
+> void set_retries(Config& cfg, int retries)
+> {
+>     cfg.retries = retries;
+> }
+>
+> // Full members are visible here, so implementation can use hidden fields.
+> void apply_config(const Config& cfg)
+> {
+>     std::cout << "mode=" << cfg.mode << ", retries=" << cfg.retries << '\n';
+> }
+> ```
+>
+> `main.cpp` (client):
+>
+> ```cpp
+> #include "config_api.h"
+>
+> int main()
+> {
+>     Config* cfg = create_config();
+>     set_mode(*cfg, "fast");
+>     set_retries(*cfg, 5);
+>     apply_config(*cfg);
+>     destroy_config(cfg);
+>
+>     // Client can use Config through API calls.
+>     // Client cannot do cfg->mode or cfg->retries, because Config is incomplete here.
+> }
+> ```
+>
+> Benefits of this hiding:
 > - smaller public headers and fewer transitive includes
 > - reduced client rebuilds when internals change
 > - lower coupling between client code and implementation choices
