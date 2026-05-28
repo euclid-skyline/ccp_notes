@@ -1,4 +1,4 @@
-# C++ Identifier Declaration and Definition Notes <!-- omit in toc -->
+# C++ Identifiers Declaration and Definition Notes <!-- omit in toc -->
 
 ## Table of Contents <!-- omit in toc -->
 
