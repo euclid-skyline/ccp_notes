@@ -1,4 +1,55 @@
-# C++ General Notes
+# C++ General Notes <!-- omit in toc -->
+
+## Table of Contents <!-- omit in toc -->
+
+- [1) Standard Data Types and Literal Assignment](#1-standard-data-types-and-literal-assignment)
+  - [Fundamental Integer Types](#fundamental-integer-types)
+  - [Character Types](#character-types)
+  - [Floating-Point Types](#floating-point-types)
+  - [Boolean and Void](#boolean-and-void)
+  - [Common Literal Forms](#common-literal-forms)
+  - [Type Aliases from `<cstdint>` (Fixed Width)](#type-aliases-from-cstdint-fixed-width)
+- [2) Keywords Added by C++ Standard (C++11 to Latest)](#2-keywords-added-by-c-standard-c11-to-latest)
+  - [Common Keywords Before C++11 (C++98/C++03 era)](#common-keywords-before-c11-c98c03-era)
+  - [C++11 (new keywords)](#c11-new-keywords)
+  - [C++14](#c14)
+  - [C++17](#c17)
+  - [C++20 (new keywords)](#c20-new-keywords)
+  - [C++23](#c23)
+  - [C++26 (latest draft/ongoing standardization)](#c26-latest-draftongoing-standardization)
+  - [Quick Context: Reserved vs Contextual](#quick-context-reserved-vs-contextual)
+- [3) Features Added by New Standards (Not in Older Standards)](#3-features-added-by-new-standards-not-in-older-standards)
+  - [C++11 (major jump from C++03)](#c11-major-jump-from-c03)
+  - [C++14](#c14-1)
+  - [C++17](#c17-1)
+  - [C++20](#c20)
+  - [C++23](#c23-1)
+  - [C++26 (in progress)](#c26-in-progress)
+  - [Practical Tip](#practical-tip)
+- [4) Compiler Compatibility Comparison: GNU GCC, LLVM Clang, and Microsoft MSVC](#4-compiler-compatibility-comparison-gnu-gcc-llvm-clang-and-microsoft-msvc)
+  - [Main Compilers](#main-compilers)
+  - [Latest Current Versions (as of May 2026)](#latest-current-versions-as-of-may-2026)
+  - [Standards Support](#standards-support)
+  - [What Is Not Fully Supported Yet](#what-is-not-fully-supported-yet)
+  - [C++ Standard vs Standard Library](#c-standard-vs-standard-library)
+  - [Standard Library Names in the Three Main Implementations](#standard-library-names-in-the-three-main-implementations)
+  - [Why This Matters](#why-this-matters)
+  - [Main Standard Library Areas](#main-standard-library-areas)
+  - [Are Keywords Part of the Standard Library?](#are-keywords-part-of-the-standard-library)
+  - [Quick Comparison](#quick-comparison)
+  - [Important C++20 Feature Support](#important-c20-feature-support)
+  - [Important C++23 Feature Support](#important-c23-feature-support)
+  - [Reading These Tables Correctly](#reading-these-tables-correctly)
+  - [Language Mode Flags](#language-mode-flags)
+  - [Important Practical Differences](#important-practical-differences)
+    - [GCC](#gcc)
+    - [Clang/LLVM](#clangllvm)
+    - [MSVC](#msvc)
+  - [Compatibility Notes](#compatibility-notes)
+  - [Common Sources of Portability Problems](#common-sources-of-portability-problems)
+  - [Good Practice for Cross-Compiler Code](#good-practice-for-cross-compiler-code)
+
+
 
 ## 1) Standard Data Types and Literal Assignment
 
