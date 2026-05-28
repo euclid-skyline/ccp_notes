@@ -2,6 +2,14 @@
 
 ## Table of Contents <!-- omit in toc -->
 
+- [Purpose](#purpose)
+- [0) C++ Language Main Features](#0-c-language-main-features)
+    - [Strongly Typed by Design](#strongly-typed-by-design)
+    - [Declaration Before Use: First Reading Rule](#declaration-before-use-first-reading-rule)
+    - [Forward Declarations and References Across Files](#forward-declarations-and-references-across-files)
+    - [C++ File Anatomy](#c-file-anatomy)
+        - [Header File and Implementation File](#header-file-and-implementation-file)
+        - [Header-Only Project](#header-only-project)
 - [1) Core Reading Model: Lifetime, Ownership, and Type Intent](#1-core-reading-model-lifetime-ownership-and-type-intent)
   - [C++ Built-in Types](#c-built-in-types)
   - [Introducing Types in C++](#introducing-types-in-c)
@@ -9,11 +17,8 @@
     - [`union`: One Storage Region, Multiple Interpretations](#union-one-storage-region-multiple-interpretations)
     - [`enum` and `enum class`: Named Constant Sets](#enum-and-enum-class-named-constant-sets)
     - [Template Types: Type Families](#template-types-type-families)
-    - [Type Aliases with `using` and `typedef`](#type-aliases-with-using-and-typedef)
-  - [C++ String Handling](#c-string-handling)
-  - [C++ File Anatomy](#c-file-anatomy)
-    - [Header File and Implementation File](#header-file-and-implementation-file)
-    - [Header-Only Project](#header-only-project)
+        - [Type Aliases with `using` and `typedef`](#type-aliases-with-using-and-typedef)
+    - [C++ String Handling](#c-string-handling)
   - [Core Reading Deep Dive: The Concepts You Need First](#core-reading-deep-dive-the-concepts-you-need-first)
     - [Class Reading Model: Objects, Constructors, and Destructors](#class-reading-model-objects-constructors-and-destructors)
     - [Object Lifetime and Ownership](#object-lifetime-and-ownership)
@@ -80,6 +85,141 @@
   - [Exercise 4: Algorithm Pass](#exercise-4-algorithm-pass)
   - [Exercise 5: Template Pass](#exercise-5-template-pass)
 - [15) Closing Advice for Long-Term Success](#15-closing-advice-for-long-term-success)
+
+## Purpose
+
+This document is for a developer transitioning from general object-oriented programming to C++ object-oriented design, with optional exposure to functional-programming ideas, who needs to review and understand production C++ source code with confidence.
+
+It is not a full C++ course and not a glossary. It is a fast-track reading guide: enough core concepts and patterns to make real code reviews easier, especially around class design, constructor/destructor behavior, ownership, pointers, references, and modern library usage.
+
+The central idea is simple: treat C++ as familiar OOP with explicit lifetime rules. Once you read ownership and object lifecycle correctly, most source code becomes predictable.
+
+---
+
+## 0) C++ Language Main Features
+
+In large C++ codebases, the most common review-time blocker is the same question: "why does this fail?" The code may look reasonable locally, but failure usually comes from contracts defined outside the current function or file. In practice, this section exists to make that failure pattern predictable.
+
+Two answers resolve most of these failures in source code:
+
+1. C++ is strongly type-centric: each expression and call must satisfy exact type rules.
+2. C++ is declaration-driven: names cannot be used until their declarations are visible at the point of use.
+
+### Strongly Typed by Design
+
+C++ is type-centric. Every variable, function, and expression has a type contract checked at compile time.
+
+- values are not implicitly interchangeable in many contexts
+- function signatures define exact parameter and return expectations
+- overload resolution depends on types, cv-qualifiers, and references
+
+> [!NOTE]
+> `cv` stands for `const` and `volatile`.
+> `cv-qualifiers` are type qualifiers that add `const` and/or `volatile` constraints, which affect valid operations and overload selection.
+
+Fast reading rule: start by identifying types on function boundaries, then inspect implementation.
+
+```cpp
+int add(int a, int b);
+double add(double a, double b);
+
+add(1, 2);      // calls int overload
+add(1.0, 2.0);  // calls double overload
+```
+
+### Declaration Before Use: First Reading Rule
+
+In C++, a variable, type, or function must be declared before any use that requires compiler knowledge of it.
+
+```cpp
+int main()
+{
+    return multiply(2, 3); // error if declaration is not visible yet
+}
+
+int multiply(int a, int b)
+{
+    return a * b;
+}
+```
+
+Fixed with a forward declaration:
+
+```cpp
+int multiply(int a, int b); // declaration first
+
+int main()
+{
+    return multiply(2, 3);
+}
+
+int multiply(int a, int b)
+{
+    return a * b;
+}
+```
+
+### Forward Declarations and References Across Files
+
+Forward declarations let you reference a type without including its full definition immediately.
+
+```cpp
+class Engine; // forward declaration
+
+void inspect(const Engine& e); // allowed: reference to incomplete type
+```
+
+Practical review benefit:
+
+- smaller headers
+- fewer rebuild cascades
+- clearer dependency boundaries
+
+You usually need the full type definition only when accessing members, allocating by value, or needing size/layout.
+
+### C++ File Anatomy
+
+The two ideas above explain the usual C++ file layout: declarations must be visible before use, and the compiler needs enough type information at the point of use. That is why many projects split code across headers and implementation files, while some small libraries keep everything in headers.
+
+#### Header File and Implementation File
+
+The normal structure is:
+
+- header file (`.h`, `.hpp`): declares the interface
+- implementation file (`.cpp`): defines the functions and methods
+
+Example:
+
+`widget.h`
+
+```cpp
+#pragma once
+
+#include <string>
+
+class Widget
+{
+public:
+    explicit Widget(std::string name);
+    void render() const;
+
+private:
+    std::string name_;
+};
+```
+
+`widget.cpp`
+
+```cpp
+#include "widget.h"
+#include <iostream>
+
+Widget::Widget(std::string name) : name_(std::move(name)) {}
+
+void Widget::render() const
+{
+    std::cout << name_ << '\n';
+}
 ```
 
 How to read this structure:
@@ -281,86 +421,6 @@ void log_line(std::string_view line);        // read-only, non-owning
 void set_name(std::string name);             // takes ownership/move-friendly
 void fill_buffer(char* out, std::size_t n);  // writable C-style buffer
 ```
-
-### C++ File Anatomy
-
-The two ideas above explain the usual C++ file layout: declarations must be visible before use, and the compiler needs enough type information at the point of use. That is why many projects split code across headers and implementation files, while some small libraries keep everything in headers.
-
-#### Header File and Implementation File
-
-The normal structure is:
-
-- header file (`.h`, `.hpp`): declares the interface
-- implementation file (`.cpp`): defines the functions and methods
-
-Example:
-
-`widget.h`
-
-```cpp
-#pragma once
-
-#include <string>
-
-class Widget
-{
-public:
-    explicit Widget(std::string name);
-    void render() const;
-
-private:
-    std::string name_;
-};
-```
-
-`widget.cpp`
-
-```cpp
-#include "widget.h"
-#include <iostream>
-
-Widget::Widget(std::string name) : name_(std::move(name)) {}
-
-void Widget::render() const
-{
-    std::cout << name_ << '\n';
-}
-```
-
-How to read this structure:
-
-- the header tells you what the type promises
-- the implementation file tells you how it fulfills that promise
-- callers include the header, not the `.cpp`
-- implementation changes are often local to the `.cpp` file
-
-#### Header-Only Project
-
-A header-only project keeps declarations and definitions in header files. This is common for templates and small reusable utilities.
-
-```cpp
-#pragma once
-
-template <typename T>
-T square(T value)
-{
-    return value * value;
-}
-```
-
-Why header-only is used:
-
-- templates usually must be fully visible where they are instantiated
-- small utilities are easier to distribute as a single header
-- it can simplify build setup for small libraries
-
-Tradeoffs:
-
-- more code is visible to every file that includes the header
-- compile times can grow as headers get larger
-- implementation details are harder to hide
-
-Reading rule: if the project is header-only, expect more inline function definitions and more template code directly in headers. If it uses headers plus `.cpp` files, expect a clearer interface/implementation split.
 
 ### Core Reading Deep Dive: The Concepts You Need First
 
