@@ -4,12 +4,12 @@
 
 - [Purpose](#purpose)
 - [0) C++ Language Main Features](#0-c-language-main-features)
-    - [Strongly Typed by Design](#strongly-typed-by-design)
-    - [Declaration Before Use: First Reading Rule](#declaration-before-use-first-reading-rule)
-    - [Forward Declarations and References Across Files](#forward-declarations-and-references-across-files)
-    - [C++ File Anatomy](#c-file-anatomy)
-        - [Header File and Implementation File](#header-file-and-implementation-file)
-        - [Header-Only Project](#header-only-project)
+  - [Strongly Typed by Design](#strongly-typed-by-design)
+  - [Declaration Before Use: First Reading Rule](#declaration-before-use-first-reading-rule)
+  - [Forward Declarations and References Across Files](#forward-declarations-and-references-across-files)
+  - [C++ File Anatomy](#c-file-anatomy)
+    - [Header File and Implementation File](#header-file-and-implementation-file)
+    - [Header-Only Project](#header-only-project)
 - [1) Core Reading Model: Lifetime, Ownership, and Type Intent](#1-core-reading-model-lifetime-ownership-and-type-intent)
   - [C++ Built-in Types](#c-built-in-types)
   - [Introducing Types in C++](#introducing-types-in-c)
@@ -17,8 +17,8 @@
     - [`union`: One Storage Region, Multiple Interpretations](#union-one-storage-region-multiple-interpretations)
     - [`enum` and `enum class`: Named Constant Sets](#enum-and-enum-class-named-constant-sets)
     - [Template Types: Type Families](#template-types-type-families)
-        - [Type Aliases with `using` and `typedef`](#type-aliases-with-using-and-typedef)
-    - [C++ String Handling](#c-string-handling)
+    - [Type Aliases with `using` and `typedef`](#type-aliases-with-using-and-typedef)
+  - [C++ String Handling](#c-string-handling)
   - [Core Reading Deep Dive: The Concepts You Need First](#core-reading-deep-dive-the-concepts-you-need-first)
     - [Class Reading Model: Objects, Constructors, and Destructors](#class-reading-model-objects-constructors-and-destructors)
     - [Object Lifetime and Ownership](#object-lifetime-and-ownership)
@@ -50,7 +50,7 @@
   - [Structured Bindings](#structured-bindings)
   - [`if constexpr`](#if-constexpr)
   - [`std::optional`, `std::variant`, `std::any`](#stdoptional-stdvariant-stdany)
-  - [`std::string_view`](#stdstring_view)
+  - [`std::string_view`](#stdstringview)
   - [`std::filesystem`](#stdfilesystem)
 - [6) C++20: A Second Major Inflection Point](#6-c20-a-second-major-inflection-point)
   - [Concepts and `requires`](#concepts-and-requires)
@@ -85,7 +85,6 @@
   - [Exercise 4: Algorithm Pass](#exercise-4-algorithm-pass)
   - [Exercise 5: Template Pass](#exercise-5-template-pass)
 - [15) Closing Advice for Long-Term Success](#15-closing-advice-for-long-term-success)
-
 ## Purpose
 
 This document is for a developer transitioning from general object-oriented programming to C++ object-oriented design, with optional exposure to functional-programming ideas, who needs to review and understand production C++ source code with confidence.
@@ -1699,3 +1698,5 @@ When in doubt, ask three design questions:
 3. Is the interface saying intent clearly through types?
 
 If your code answers those questions well, you are already writing strong modern C++, even before adopting every new feature in the latest standard.
+
+
