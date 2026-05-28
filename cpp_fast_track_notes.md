@@ -108,6 +108,10 @@ C++ is type-centric. Every variable, function, and expression has a type contrac
 - function signatures define exact parameter and return expectations
 - overload resolution depends on types, cv-qualifiers, and references
 
+> [!NOTE]
+> `cv` stands for `const` and `volatile`.
+> `cv-qualifiers` are type qualifiers that add `const` and/or `volatile` constraints, which affect valid operations and overload selection.
+
 Fast reading rule: start by identifying types on function boundaries, then inspect implementation.
 
 ```cpp
