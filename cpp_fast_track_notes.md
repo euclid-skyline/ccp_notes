@@ -1,38 +1,276 @@
-# C++ Fast Track Notes
+# C++ Fast Track Notes <!-- omit in toc -->
 
-## Table of Contents
+## Table of Contents <!-- omit in toc -->
 
-1. [Purpose](#purpose)
-2. [Refresher: The Old C++ Foundation Still Matters](#1-refresher-the-old-c-foundation-still-matters)
-3. [Rule of Three to Rule of Five to Rule of Zero](#rule-of-three-to-rule-of-five-to-rule-of-zero)
-4. [The Real Shift Since C++11](#2-the-real-shift-since-c11)
-5. [C++11: The New Baseline of Modern C++](#3-c11-the-new-baseline-of-modern-c)
-6. [C++14: C++11, But Smoother](#4-c14-c11-but-smoother)
-7. [C++17: Everyday Productivity Standard](#5-c17-everyday-productivity-standard)
-8. [C++20: A Second Major Inflection Point](#6-c20-a-second-major-inflection-point)
-9. [C++23: Maturity and Gap-Filling](#7-c23-maturity-and-gap-filling)
-10. [Language Features vs Library Features: Why Your Toolchain Matters](#8-language-features-vs-library-features-why-your-toolchain-matters)
-11. [How to Read and Modernize Legacy Code](#9-how-to-read-and-modernize-legacy-code)
-12. [Recommended Return Plan (Practical)](#10-recommended-return-plan-practical)
-13. [Final Takeaway](#11-final-takeaway)
-14. [A Full Old-to-Modern Refactor Example](#12-a-full-old-to-modern-refactor-example)
-15. [Common Mistakes Returning Developers Make](#13-common-mistakes-returning-developers-make)
-16. [Practical Re-entry Exercises (One Weekend Plan)](#14-practical-re-entry-exercises-one-weekend-plan)
-17. [Closing Advice for Long-Term Success](#15-closing-advice-for-long-term-success)
+- [Purpose](#purpose)
+- [0) C++ Language Main Features](#0-c-language-main-features)
+  - [Strongly Typed by Design](#strongly-typed-by-design)
+  - [Declaration Before Use: First Reading Rule](#declaration-before-use-first-reading-rule)
+  - [Forward Declarations and References Across Files](#forward-declarations-and-references-across-files)
+  - [All Practical Ways to Introduce Types in C++](#all-practical-ways-to-introduce-types-in-c)
+    - [`struct` and `class`: Same Power, Different Defaults](#struct-and-class-same-power-different-defaults)
+    - [`union`: One Storage Region, Multiple Interpretations](#union-one-storage-region-multiple-interpretations)
+    - [`enum` and `enum class`: Named Constant Sets](#enum-and-enum-class-named-constant-sets)
+    - [Template Types: Type Families](#template-types-type-families)
+    - [Type Aliases with `using` and `typedef`](#type-aliases-with-using-and-typedef)
+- [1) Core Reading Model: Lifetime, Ownership, and Type Intent](#1-core-reading-model-lifetime-ownership-and-type-intent)
+  - [Core Reading Deep Dive: The Concepts You Need First](#core-reading-deep-dive-the-concepts-you-need-first)
+    - [Object Lifetime and Ownership](#object-lifetime-and-ownership)
+      - [Why Raw Pointer Ownership Causes Problems](#why-raw-pointer-ownership-causes-problems)
+      - [How Smart Pointers Fix Ownership Issues](#how-smart-pointers-fix-ownership-issues)
+    - [Const Correctness](#const-correctness)
+    - [RAII (Resource Acquisition Is Initialization)](#raii-resource-acquisition-is-initialization)
+    - [Separation of Interface and Implementation](#separation-of-interface-and-implementation)
+      - [Example 1: Classic Header/Source Split](#example-1-classic-headersource-split)
+      - [Example 2: Intentional Hiding with pImpl](#example-2-intentional-hiding-with-pimpl)
+      - [Interface Design Intent](#interface-design-intent)
+    - [Template Basics](#template-basics)
+    - [STL Containers and Algorithms](#stl-containers-and-algorithms)
+    - [Exception Handling for Exceptional Paths](#exception-handling-for-exceptional-paths)
+  - [Rule of Three to Rule of Five to Rule of Zero](#rule-of-three-to-rule-of-five-to-rule-of-zero)
+    - [Rule of Three](#rule-of-three)
+    - [Rule of Five](#rule-of-five)
+    - [Rule of Zero](#rule-of-zero)
+- [2) Modern C++ Reading Mindset](#2-modern-c-reading-mindset)
+- [3) C++11: The New Baseline of Modern C++](#3-c11-the-new-baseline-of-modern-c)
+  - [`auto` and Type Deduction](#auto-and-type-deduction)
+  - [`nullptr` and Type Safety](#nullptr-and-type-safety)
+  - [Range-Based `for`](#range-based-for)
+  - [Lambdas](#lambdas)
+  - [Move Semantics](#move-semantics)
+  - [Smart Pointers and Ownership](#smart-pointers-and-ownership)
+- [4) C++14: C++11, But Smoother](#4-c14-c11-but-smoother)
+- [5) C++17: Everyday Productivity Standard](#5-c17-everyday-productivity-standard)
+  - [Structured Bindings](#structured-bindings)
+  - [`if constexpr`](#if-constexpr)
+  - [`std::optional`, `std::variant`, `std::any`](#stdoptional-stdvariant-stdany)
+  - [`std::string_view`](#stdstring_view)
+  - [`std::filesystem`](#stdfilesystem)
+- [6) C++20: A Second Major Inflection Point](#6-c20-a-second-major-inflection-point)
+  - [Concepts and `requires`](#concepts-and-requires)
+  - [Ranges](#ranges)
+  - [`std::span`](#stdspan)
+  - [`std::format`](#stdformat)
+  - [Coroutines and Modules](#coroutines-and-modules)
+- [7) C++23: Maturity and Gap-Filling](#7-c23-maturity-and-gap-filling)
+  - [`std::expected`](#stdexpected)
+  - [`std::print` and `std::println`](#stdprint-and-stdprintln)
+  - [`std::mdspan`](#stdmdspan)
+  - [Language Cleanups](#language-cleanups)
+- [8) Language Features vs Library Features: Why Your Toolchain Matters](#8-language-features-vs-library-features-why-your-toolchain-matters)
+- [9) How to Read and Modernize Legacy Code](#9-how-to-read-and-modernize-legacy-code)
+  - [Boundary Modernization Pattern](#boundary-modernization-pattern)
+  - [Replace the Most Risky Patterns First](#replace-the-most-risky-patterns-first)
+- [10) Recommended Fast-Track Plan (Practical)](#10-recommended-fast-track-plan-practical)
+- [11) Final Takeaway](#11-final-takeaway)
+- [12) A Full Old-to-Modern Refactor Example](#12-a-full-old-to-modern-refactor-example)
+  - [Older Style (Common in C++03-era Code)](#older-style-common-in-c03-era-code)
+  - [Modernized Style](#modernized-style)
+- [13) Common Reading Mistakes in C++](#13-common-reading-mistakes-in-c)
+  - [Mistake 1: Keeping Ownership Ambiguous](#mistake-1-keeping-ownership-ambiguous)
+  - [Mistake 2: Using Sentinel Values for Everything](#mistake-2-using-sentinel-values-for-everything)
+  - [Mistake 3: Overusing Manual Loops](#mistake-3-overusing-manual-loops)
+  - [Mistake 4: Treating `auto` as Either Always Good or Always Bad](#mistake-4-treating-auto-as-either-always-good-or-always-bad)
+  - [Mistake 5: Ignoring Toolchain Layering](#mistake-5-ignoring-toolchain-layering)
+- [14) Practical Review Exercises (One Weekend Plan)](#14-practical-review-exercises-one-weekend-plan)
+  - [Exercise 1: Ownership Pass](#exercise-1-ownership-pass)
+  - [Exercise 2: Interface Pass](#exercise-2-interface-pass)
+  - [Exercise 3: Return Type Pass](#exercise-3-return-type-pass)
+  - [Exercise 4: Algorithm Pass](#exercise-4-algorithm-pass)
+  - [Exercise 5: Template Pass](#exercise-5-template-pass)
+- [15) Closing Advice for Long-Term Success](#15-closing-advice-for-long-term-success)
+
 
 ## Purpose
 
-This document is for a developer who wrote C++ in the C++98/C++03 era, then moved away from the language for many years. It is not a glossary. It is a guided refresher that starts from old, still-valid knowledge and then builds forward through the modern standards.
+This document is for a developer with solid object-oriented programming knowledge and some functional-programming exposure who needs to review and understand production C++ source code with confidence.
 
-The central idea is simple: your old knowledge is still useful, but the style of writing good C++ changed significantly beginning in C++11.
+It is not a full C++ course and not a glossary. It is a fast-track reading guide: enough core concepts and patterns to make real code reviews easier, especially around class design, constructor/destructor behavior, ownership, pointers, references, and modern library usage.
+
+The central idea is simple: treat C++ as familiar OOP with explicit lifetime rules. Once you read ownership and object lifecycle correctly, most source code becomes predictable.
 
 ---
 
-## 1) Refresher: The Old C++ Foundation Still Matters
+## 0) C++ Language Main Features
 
-If you were productive in classic C++, you already understand the hardest part of the language: object lifetime and ownership. You know that resources must be acquired and released correctly, that copies can be expensive, and that interfaces should communicate intent.
+In large C++ codebases, the most common review-time blocker is the same question: "why does this fail?" The code may look reasonable locally, but failure usually comes from contracts defined outside the current function or file. In practice, this section exists to make that failure pattern predictable.
 
-Those ideas remain true in C++11 and later. The language did not replace them; it gave you better tools to express them.
+Two answers resolve most of these failures in source code:
+
+1. C++ is strongly type-centric: each expression and call must satisfy exact type rules.
+2. C++ is declaration-driven: names cannot be used until their declarations are visible at the point of use.
+
+### Strongly Typed by Design
+
+C++ is type-centric. Every variable, function, and expression has a type contract checked at compile time.
+
+- values are not implicitly interchangeable in many contexts
+- function signatures define exact parameter and return expectations
+- overload resolution depends on types, cv-qualifiers, and references
+
+Fast reading rule: start by identifying types on function boundaries, then inspect implementation.
+
+```cpp
+int add(int a, int b);
+double add(double a, double b);
+
+add(1, 2);      // calls int overload
+add(1.0, 2.0);  // calls double overload
+```
+
+### Declaration Before Use: First Reading Rule
+
+In C++, a variable, type, or function must be declared before any use that requires compiler knowledge of it.
+
+```cpp
+int main()
+{
+    return multiply(2, 3); // error if declaration is not visible yet
+}
+
+int multiply(int a, int b)
+{
+    return a * b;
+}
+```
+
+Fixed with a forward declaration:
+
+```cpp
+int multiply(int a, int b); // declaration first
+
+int main()
+{
+    return multiply(2, 3);
+}
+
+int multiply(int a, int b)
+{
+    return a * b;
+}
+```
+
+### Forward Declarations and References Across Files
+
+Forward declarations let you reference a type without including its full definition immediately.
+
+```cpp
+class Engine; // forward declaration
+
+void inspect(const Engine& e); // allowed: reference to incomplete type
+```
+
+Practical review benefit:
+
+- smaller headers
+- fewer rebuild cascades
+- clearer dependency boundaries
+
+You usually need the full type definition only when accessing members, allocating by value, or needing size/layout.
+
+### All Practical Ways to Introduce Types in C++
+
+The core language options are:
+
+- `struct`
+- `class`
+- `union`
+- `enum` and `enum class`
+- type aliases (`using`, `typedef`)
+
+#### `struct` and `class`: Same Power, Different Defaults
+
+`struct` and `class` are almost identical in capabilities. The key default differences are:
+
+- `struct`: members and inheritance are `public` by default
+- `class`: members and inheritance are `private` by default
+
+Use guide in real code reviews:
+
+- use `struct` for simple data carriers and value objects with mostly public state
+- use `class` for behavior-centric types with encapsulation boundaries
+
+```cpp
+struct Point
+{
+    double x{0.0};
+    double y{0.0};
+};
+
+class BankAccount
+{
+public:
+    explicit BankAccount(double initial) : balance_(initial) {}
+    void deposit(double amount) { balance_ += amount; }
+    double balance() const { return balance_; }
+
+private:
+    double balance_;
+};
+```
+
+#### `union`: One Storage Region, Multiple Interpretations
+
+A `union` stores different fields in the same memory location, one active member at a time.
+
+```cpp
+union NumberView
+{
+    int i;
+    float f;
+};
+```
+
+Use it when memory layout control is required. In most application code, prefer safer alternatives such as `std::variant` unless low-level constraints require a union.
+
+#### `enum` and `enum class`: Named Constant Sets
+
+`enum` creates named constants. `enum class` is strongly scoped and avoids accidental implicit conversions.
+
+```cpp
+enum OldState { idle, running };
+enum class State { Idle, Running };
+
+State s = State::Idle; // scoped and explicit
+```
+
+Review preference: prefer `enum class` for modern code readability and type safety.
+
+#### Template Types: Type Families
+
+Templates define type families, not just one concrete type.
+
+```cpp
+template <typename T>
+struct Box
+{
+    T value;
+};
+
+Box<int> a{42};
+Box<std::string> b{"ok"};
+```
+
+Use this model when one design should work for many element types. For fast code review, read the instantiated type first (`Box<int>`, `Box<User>`) and then map back to the template definition.
+
+#### Type Aliases with `using` and `typedef`
+
+Aliases give existing types better names. They do not create a brand-new distinct runtime type.
+
+```cpp
+using UserId = std::uint64_t;
+typedef std::vector<std::string> StringList;
+```
+
+`using` is generally preferred in modern C++ because it is clearer and works better with templates.
+
+---
+
+## 1) Core Reading Model: Lifetime, Ownership, and Type Intent
+
+If you are already strong in OOP design, C++ class structure and interfaces will feel familiar. The important difference is that lifetime and ownership are explicit in the code and must be read intentionally.
+
+Modern C++ did not change those fundamentals. It gave clearer language and library tools to express them.
 
 Classic principles that are still valid today include:
 
@@ -43,7 +281,7 @@ Classic principles that are still valid today include:
 - STL containers and algorithms
 - exception handling for exceptional paths
 
-### Refresher Deep Dive: Core Subjects You Should Re-Anchor First
+### Core Reading Deep Dive: The Concepts You Need First
 
 #### Object Lifetime and Ownership
 
@@ -67,6 +305,36 @@ Modern C++ expects ownership to be explicit in types and APIs.
 - raw pointers are usually non-owning observers in modern interfaces
 
 If you keep ownership clear, the rest of modern C++ becomes much easier.
+
+For an OOP reader, this is the key translation layer:
+
+- class shape is familiar (fields + methods), but object lifetime is explicit
+- constructors and destructors are part of normal type design, not framework magic
+- value semantics are common: objects are frequently copied or moved by design
+
+Minimal class lifecycle example:
+
+```cpp
+class Session
+{
+public:
+    Session() = default;                               // default constructor
+    explicit Session(std::string name) : name_(std::move(name)) {} // value constructor
+
+    Session(const Session& other) = default;          // copy constructor
+    Session(Session&& other) noexcept = default;      // move constructor
+
+    Session& operator=(const Session& other) = default; // copy assignment
+    Session& operator=(Session&& other) noexcept = default; // move assignment
+
+    ~Session() = default;                             // destructor
+
+private:
+    std::string name_;
+};
+```
+
+Reading tip: when reviewing a class, quickly scan for these six lifecycle operations before reading business logic. That immediately tells you whether the type is copyable, movable, both, or neither.
 
 ##### Why Raw Pointer Ownership Causes Problems
 
@@ -227,6 +495,45 @@ void maybe_tick(Widget* w)
 ```
 
 `maybe_tick` can use `w` if present, but it must never call `delete w` because it is not the owner.
+
+Pointer-to-pointer appears in legacy code and C APIs:
+
+```cpp
+void replace_widget(Widget** slot, Widget* next)
+{
+    *slot = next; // updates caller's pointer variable
+}
+```
+
+When reading this style, `Widget**` usually means "this function can rebind the caller's pointer". In modern C++, this is often replaced with references or smart-pointer parameters for clarity.
+
+Quick mapping for common signatures during code review:
+
+- `T*` or `const T*`: non-owning, nullable access
+- `T&` or `const T&`: non-owning, non-null access
+- `std::unique_ptr<T>` by value: ownership transfer
+- `std::unique_ptr<T>&`: modify current owner without transfer
+- `std::shared_ptr<T>` by value: shared ownership participation
+
+References and reference-of-reference note:
+
+- direct reference-to-reference declarations are not allowed in source code (`T& &`)
+- in templates, reference collapsing rules apply and are common in forwarding code
+
+```cpp
+template <typename T>
+void relay(T&& value) // forwarding reference
+{
+    consume(std::forward<T>(value));
+}
+```
+
+Practical reading rule:
+
+- if `T` is deduced as `U&`, then `T&&` becomes `U&`
+- if `T` is deduced as `U`, then `T&&` stays `U&&`
+
+You do not need to memorize all template details for review work. Just remember that forwarding code preserves whether the original argument was an lvalue or rvalue.
 
 #### Const Correctness
 
@@ -609,6 +916,24 @@ If a class manages a resource manually, and you define one of these three specia
 
 Why? Because a class that owns something usually needs to define how that resource is destroyed, copied, and reassigned.
 
+Constructor/destructor quick comfort map for reviewers:
+
+- default constructor: creates an object with default state
+- value constructor: creates an object from provided inputs
+- copy constructor: creates a new object from an existing lvalue object
+- move constructor: creates a new object by taking resources from a temporary/rvalue object
+- destructor: cleanup at end of lifetime
+
+Example call sites:
+
+```cpp
+Buffer a(10);              // value constructor
+Buffer b = a;              // copy constructor
+Buffer c = std::move(a);   // move constructor
+```
+
+In review practice, if a resource-owning class manually defines one lifecycle function, verify that copy/move/destruction semantics are all coherent.
+
 ```cpp
 class Buffer
 {
@@ -702,11 +1027,17 @@ The Rule of Zero is often the best modern design target because it reduces bugs 
 
 ---
 
-## 2) The Real Shift Since C++11
+## 2) Modern C++ Reading Mindset
 
 The main shift is not syntax. The shift is design philosophy.
 
 Old C++ often required "manual correctness." Modern C++ aims for "expressed correctness," where ownership, optionality, and constraints are visible in types and interfaces.
+
+For experienced Java/Kotlin engineers, this is the biggest mindset difference when reading C++:
+
+- C++ frequently uses value objects instead of always heap objects
+- copy vs move is explicit in type operations and function signatures
+- destructor timing is deterministic (scope-based), not garbage-collector-driven
 
 Compare the intent in these two interfaces:
 
@@ -1028,7 +1359,7 @@ Modernizing those gives the biggest safety and maintenance win.
 
 ---
 
-## 10) Recommended Return Plan (Practical)
+## 10) Recommended Fast-Track Plan (Practical)
 
 Do not try to absorb all standards at once. A staged approach works better.
 
@@ -1040,11 +1371,11 @@ This path gets you productive quickly while still moving toward modern style.
 
 ## 11) Final Takeaway
 
-If you wrote C++ twenty years ago, you are not starting from zero. You already understand the hard mental model of the language.
+If you are an experienced multi-language OOP engineer, you are not starting from zero. Most class and interface patterns are familiar.
 
-What changed is that modern C++ provides better expression for ownership, constraints, optionality, and data transformation. The language is still powerful, but now it can be written in a way that is safer, clearer, and easier to maintain.
+The part to internalize is explicit lifetime and ownership: constructor/destructor behavior, copy vs move semantics, pointer/reference intent, and when smart pointers express ownership contracts.
 
-The winning mindset is: preserve old fundamentals, adopt modern interfaces, and let the type system and standard library carry more intent.
+The winning mindset for code review is: identify ownership first, identify lifecycle second, then read business logic. Once those two layers are clear, most C++ source code becomes straightforward to reason about.
 
 ---
 
@@ -1135,7 +1466,7 @@ This is the core modern pattern: make ownership and error behavior visible in ty
 
 ---
 
-## 13) Common Mistakes Returning Developers Make
+## 13) Common Reading Mistakes in C++
 
 Returning C++ developers are usually strong at low-level reasoning, but the first months back often include repeated style mismatches. Knowing them early saves time.
 
@@ -1161,7 +1492,7 @@ A feature may compile in one environment and fail in another because frontend su
 
 ---
 
-## 14) Practical Re-entry Exercises (One Weekend Plan)
+## 14) Practical Review Exercises (One Weekend Plan)
 
 A useful way to get back in shape is to take one old utility module and modernize it in steps.
 
