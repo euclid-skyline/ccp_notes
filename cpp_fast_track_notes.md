@@ -643,13 +643,36 @@ Use it when memory layout control is required. In most application code, prefer 
 
 #### `enum` and `enum class`: Named Constant Sets
 
-`enum` creates named constants. `enum class` is strongly scoped and avoids accidental implicit conversions. The following block shows both forms:
+`enum` creates named constants. `enum class` is strongly scoped and avoids accidental implicit conversions. The following block shows an old-style `enum` and why it can be risky:
 
 ```cpp
-enum OldState { idle, running };
-enum class State { Idle, Running };
+enum OldState { idle, running, failed };
 
-State s = State::Idle; // scoped and explicit
+void log_code(int code);
+
+OldState s = running;
+log_code(s);            // allowed: implicit enum -> int conversion
+
+if (s == 1)             // allowed: compare enum with raw integer
+{
+    // easy to write, but intent is weak and error-prone
+}
+```
+
+The following block shows the modern `enum class` form:
+
+```cpp
+enum class State { Idle, Running, Failed };
+
+State s = State::Running;
+
+// log_code(s);         // error: no implicit conversion to int
+log_code(static_cast<int>(s)); // explicit when you really need numeric value
+
+if (s == State::Running) // scoped and explicit
+{
+    // clearer intent
+}
 ```
 
 In modern C++ code, prefer `enum class` for readability and type safety.
@@ -673,14 +696,30 @@ Use this model when one design should work for many element types. For fast read
 
 #### Type Aliases with `using` and `typedef`
 
-Aliases give existing types better names. They do not create a brand-new distinct runtime type. The following block shows both alias styles:
+Aliases give existing types better names. They do not create a brand-new distinct runtime type.
+
+Both forms are valid, but they differ in readability and template usage:
+
+- `typedef` uses older declaration syntax and can be harder to read for function-pointer or nested types
+- `using` reads left-to-right (`Name = ExistingType`) and is easier to scan
+- only `using` can define alias templates (`template <typename T> using ...`)
+
+The following block shows equivalent aliases and a template alias that only `using` can express:
 
 ```cpp
 using UserId = std::uint64_t;
 typedef std::vector<std::string> StringList;
+
+using Handler = void(*)(int);           // clearer function-pointer alias
+typedef void(*LegacyHandler)(int);      // same meaning, older syntax
+
+template <typename T>
+using Vec = std::vector<T>;             // alias template (no typedef equivalent)
 ```
 
-`using` is generally preferred in modern C++ because it is clearer and works better with templates.
+Use `using` for new code. Keep `typedef` when maintaining legacy code unless you are already refactoring that area.
+
+In practice, `using` is preferred because it improves readability, scales better in generic code, and keeps naming conventions consistent with modern C++ style.
 
 ### C++ String Handling
 
