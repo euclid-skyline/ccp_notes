@@ -262,6 +262,190 @@ This approach has tradeoffs:
 
 If the project is header-only, expect more inline function definitions and more template code directly in headers. If it uses headers plus `.cpp` files, expect a clearer interface/implementation split.
 
+
+
+> [!INFO]
+> **Implementation Variants**
+>
+> Beyond the header/source split and header-only layouts, several other patterns appear frequently in real projects.
+>
+> ---
+>
+> **Template Split with Explicit Instantiation**
+>
+> Templates are normally defined in headers because the compiler needs the full definition at instantiation time. For templates used across many translation units this can increase compile time. One solution is to keep the declaration in the header, define the template in a `.cpp` file, and add explicit instantiations for the types you need. Callers can only use the explicitly instantiated types; any other type fails at link time, which is a deliberate boundary.
+>
+> `math.h`
+> ```cpp
+> #pragma once
+>
+> template <typename T>
+> T clamp(T value, T low, T high);
+> ```
+>
+> `math.cpp`
+> ```cpp
+> #include "math.h"
+>
+> template <typename T>
+> T clamp(T value, T low, T high)
+> {
+>     if (value < low) return low;
+>     if (value > high) return high;
+>     return value;
+> }
+>
+> template int   clamp<int>(int, int, int);
+> template float clamp<float>(float, float, float);
+> ```
+>
+> ---
+>
+> **Separate Implementation Include Files (`.ipp` / `.tpp`)**
+>
+> When template definitions are long, keeping them inside the header body makes the file hard to navigate. A common convention puts definitions in a `.ipp` or `.tpp` file and includes it at the bottom of the header. Callers include only the header; the `.ipp` file is never included directly.
+>
+> `container.h`
+> ```cpp
+> #pragma once
+>
+> template <typename T>
+> class Container
+> {
+> public:
+>     void add(T value);
+>     T get(std::size_t index) const;
+> private:
+>     std::vector<T> data_;
+> };
+>
+> #include "container.ipp"
+> ```
+>
+> `container.ipp`
+> ```cpp
+> template <typename T>
+> void Container<T>::add(T value) { data_.push_back(std::move(value)); }
+>
+> template <typename T>
+> T Container<T>::get(std::size_t index) const { return data_.at(index); }
+> ```
+>
+> ---
+>
+> **C++20 Module Interface and Implementation Units**
+>
+> Modules replace `#include` with `import`. A module interface unit (`.ixx`) declares the exported surface; a module implementation unit (`.cpp`) holds the definitions. Other files import the module by name instead of including a header. Modules reduce rebuild cascades and prevent macro leakage across boundaries.
+>
+> `geometry.ixx`
+> ```cpp
+> export module geometry;
+>
+> export struct Point { double x; double y; };
+> export double distance(Point a, Point b);
+> ```
+>
+> `geometry.cpp`
+> ```cpp
+> module geometry;
+> #include <cmath>
+>
+> double distance(Point a, Point b)
+> {
+>     double dx = b.x - a.x;
+>     double dy = b.y - a.y;
+>     return std::sqrt(dx * dx + dy * dy);
+> }
+> ```
+>
+> `main.cpp`
+> ```cpp
+> import geometry;
+>
+> int main()
+> {
+>     return static_cast<int>(distance({0.0, 0.0}, {3.0, 4.0})); // 5
+> }
+> ```
+>
+> ---
+>
+> **Platform-Specific Implementation Files**
+>
+> One stable header interface can have multiple concrete implementations compiled only on the target platform. The build system selects which `.cpp` file is compiled; callers never change.
+>
+> `platform/timer.h`
+> ```cpp
+> #pragma once
+>
+> class Timer
+> {
+> public:
+>     void   start();
+>     double elapsed_ms() const;
+> };
+> ```
+>
+> `platform/windows/timer.cpp`
+> ```cpp
+> #include "platform/timer.h"
+> #include <windows.h>
+>
+> void   Timer::start()          { /* QueryPerformanceCounter */ }
+> double Timer::elapsed_ms() const { /* QueryPerformanceCounter diff */ }
+> ```
+>
+> `platform/linux/timer.cpp`
+> ```cpp
+> #include "platform/timer.h"
+> #include <time.h>
+>
+> void   Timer::start()          { /* clock_gettime */ }
+> double Timer::elapsed_ms() const { /* timespec diff */ }
+> ```
+>
+> ---
+>
+> **Test and Mock Implementations Behind a Common Interface**
+>
+> A thin abstract interface lets production and test implementations coexist without touching call sites. Production builds link with the real class; test builds inject a mock. The interface boundary isolates callers from backend details.
+>
+> `database.h`
+> ```cpp
+> #pragma once
+> #include <string_view>
+>
+> struct IDatabase
+> {
+>     virtual ~IDatabase() = default;
+>     virtual bool query(std::string_view sql) = 0;
+> };
+> ```
+>
+> `real_database.h`
+> ```cpp
+> #pragma once
+> #include "database.h"
+>
+> class RealDatabase : public IDatabase
+> {
+> public:
+>     bool query(std::string_view sql) override;
+> };
+> ```
+>
+> `mock_database.h`
+> ```cpp
+> #pragma once
+> #include "database.h"
+>
+> class MockDatabase : public IDatabase
+> {
+> public:
+>     bool query(std::string_view sql) override { return true; }
+> };
+> ```
+
 [Back to Table of Contents](#table-of-contents)
 
 ---
