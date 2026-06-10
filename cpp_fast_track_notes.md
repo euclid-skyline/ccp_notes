@@ -1386,29 +1386,46 @@ For many teams, C++17 became the first "comfortable modern" target.
 
 ### Structured Bindings
 
-The following block shows how structured bindings let you name tuple-like results directly:
+The following block shows structured bindings in a common map-insert workflow where you need both iterator access and insertion status:
 
 ```cpp
-auto [host, port] = read_endpoint();
+std::map<std::string, int> scores;
+
+auto [it, inserted] = scores.insert({"alice", 95});
+if (!inserted)
+{
+    it->second = 95; // existing key path
+}
+
+const auto& [name, score] = *it;
+std::cout << name << " => " << score << '\n';
 ```
 
 ### `if constexpr`
 
-The following block shows how `if constexpr` makes template code easier to read:
+The following block shows `if constexpr` selecting different behavior at compile time for integral and floating-point inputs:
 
 ```cpp
 template <typename T>
-void debug_value(const T& v)
+std::string category_of(const T& value)
 {
     if constexpr (std::is_integral_v<T>)
     {
-        std::cout << "integral " << v << '\n';
+        return (value % 2 == 0) ? "even integral" : "odd integral";
+    }
+    else if constexpr (std::is_floating_point_v<T>)
+    {
+        return (value == std::floor(value)) ? "floating-point (whole value)" : "floating-point (fractional)";
     }
     else
     {
-        std::cout << "non-integral\n";
+        return "non-numeric";
     }
 }
+
+std::cout << category_of(7) << '\n';      // odd integral
+std::cout << category_of(4.0) << '\n';    // floating-point (whole value)
+std::cout << category_of(3.14) << '\n';   // floating-point (fractional)
 ```
 
 ### `std::optional`, `std::variant`, `std::any`
@@ -1419,12 +1436,54 @@ These types remove many older ad-hoc patterns:
 - tagged unions become explicit via `std::variant`
 - truly dynamic values can use `std::any` when necessary
 
-### `std::string_view`
-
-The following block shows one of the most practical improvements for API design:
+The following block shows one focused use for each type:
 
 ```cpp
-void log_line(std::string_view text);
+std::optional<int> parse_port(std::string_view text)
+{
+    int value = 0;
+    auto [ptr, ec] = std::from_chars(text.data(), text.data() + text.size(), value);
+    if (ec != std::errc{} || ptr != text.data() + text.size() || value <= 0 || value > 65535)
+    {
+        return std::nullopt;
+    }
+    return value;
+}
+
+using ConfigValue = std::variant<int, bool, std::string>;
+
+void print_config(const ConfigValue& v)
+{
+    std::visit([](const auto& x)
+    {
+        std::cout << x << '\n';
+    }, v);
+}
+
+std::any payload = std::string("runtime-selected");
+if (const auto* text = std::any_cast<std::string>(&payload))
+{
+    std::cout << *text << '\n';
+}
+```
+
+### `std::string_view`
+
+The following block shows an API that accepts text without forcing a new allocation, while still allowing safe conversion when needed:
+
+```cpp
+void log_line(std::string_view text)
+{
+    if (!text.empty() && text.back() == '\n')
+    {
+        text.remove_suffix(1);
+    }
+    std::cout << "[log] " << text << '\n';
+}
+
+std::string owned = "startup complete\n";
+log_line(owned);                 // std::string input
+log_line("connection ready\n"); // string literal input
 ```
 
 You can accept many string-like inputs without forcing allocation or ownership transfer.
@@ -1432,6 +1491,30 @@ You can accept many string-like inputs without forcing allocation or ownership t
 ### `std::filesystem`
 
 Portable path and file operations moved into the standard library, reducing platform-specific code and dependency overhead.
+
+The following block shows a small utility that scans a directory for `.cpp` files and computes total byte size:
+
+```cpp
+std::uintmax_t cpp_size_total(const std::filesystem::path& root)
+{
+    std::uintmax_t total = 0;
+
+    if (!std::filesystem::exists(root))
+    {
+        return total;
+    }
+
+    for (const auto& entry : std::filesystem::recursive_directory_iterator(root))
+    {
+        if (entry.is_regular_file() && entry.path().extension() == ".cpp")
+        {
+            total += entry.file_size();
+        }
+    }
+
+    return total;
+}
+```
 
 ---
 
