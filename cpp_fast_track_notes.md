@@ -19,6 +19,7 @@
   - [OOP/FP to C++ Mental Mapping](#oopfp-to-c-mental-mapping)
   - [C++ Build and Execution Model](#c-build-and-execution-model)
   - [C++ Built-in Types](#c-built-in-types)
+  - [Standard Library Fixed-Width and Utility Types](#standard-library-fixed-width-and-utility-types)
   - [Introducing Types in C++](#introducing-types-in-c)
     - [`struct` and `class`: Same Power, Different Defaults](#struct-and-class-same-power-different-defaults)
     - [`union`: One Storage Region, Multiple Interpretations](#union-one-storage-region-multiple-interpretations)
@@ -528,6 +529,60 @@ Use this reading model for built-in types:
 - `void` means no value (`void` return) or generic address form when used as `void*`
 
 In production code, most interfaces combine built-in and user-defined types. Read the built-in part first to understand numeric range, mutability qualifiers, and pointer/reference behavior before following domain-specific types.
+
+### Standard Library Fixed-Width and Utility Types
+
+The built-in integral types (`int`, `long`, etc.) have implementation-defined sizes that can differ across platforms and compilers. When exact width matters, the standard library provides fixed-width aliases in `<cstdint>` and size-related types in `<cstddef>`. These appear throughout production code and are essential to read correctly.
+
+The following block shows the most common forms:
+
+```cpp
+#include <cstdint>
+#include <cstddef>
+
+std::uint8_t  byte_flag  = 0xFF;          // exactly 8 bits, unsigned
+std::int16_t  sensor_raw = -512;          // exactly 16 bits, signed
+std::uint32_t ipv4_addr  = 0xC0A80001u;  // exactly 32 bits, unsigned
+std::uint64_t file_id    = 123456789ULL; // exactly 64 bits, unsigned
+std::int64_t  timestamp  = -9'000'000'000LL; // 64-bit signed, large range
+
+std::size_t    count  = vec.size();  // unsigned type for sizes and indices
+std::ptrdiff_t delta  = end - begin; // signed type for pointer differences
+std::intptr_t  as_int = reinterpret_cast<std::intptr_t>(ptr); // pointer as integer
+```
+
+The standard library also provides `_least` and `_fast` variants for situations where you need at least N bits but do not require an exact width:
+
+```cpp
+std::uint_least8_t  flags;   // smallest unsigned type with at least 8 bits
+std::uint_fast32_t  counter; // fastest unsigned type with at least 32 bits
+```
+
+Use this quick reference when reading type names in production code:
+
+| Type                               | Header      | Meaning                                    |
+| ---------------------------------- | ----------- | ------------------------------------------ |
+| `std::uint8_t` – `std::uint64_t`   | `<cstdint>` | Exact-width unsigned integers              |
+| `std::int8_t` – `std::int64_t`     | `<cstdint>` | Exact-width signed integers                |
+| `std::size_t`                      | `<cstddef>` | Unsigned type for sizes, counts, indices   |
+| `std::ptrdiff_t`                   | `<cstddef>` | Signed type for pointer arithmetic results |
+| `std::intptr_t` / `std::uintptr_t` | `<cstdint>` | Integer wide enough to hold a pointer      |
+| `std::intmax_t` / `std::uintmax_t` | `<cstdint>` | Widest available signed/unsigned integer   |
+| `std::byte`                        | `<cstddef>` | Type-safe raw byte (not arithmetic)        |
+
+`std::byte` deserves a special note. It is not an integer; it is intended purely for raw memory manipulation and avoids the accidental arithmetic that `char` or `unsigned char` can invite:
+
+```cpp
+#include <cstddef>
+
+std::byte buf[64]{};
+buf[0] = std::byte{0xAB};
+
+// Bitwise ops are allowed; arithmetic is not.
+buf[1] = buf[0] | std::byte{0x0F};
+```
+
+In cross-platform or protocol code, prefer `std::uint32_t` over `unsigned int` and `std::size_t` over `int` for sizes and counts. These choices make size and signedness assumptions explicit and avoid silent truncation on platforms where built-in type widths differ.
 
 ### Introducing Types in C++
 
