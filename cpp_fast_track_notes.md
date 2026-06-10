@@ -1,8 +1,13 @@
 # C++ Fast Track Notes <!-- omit in toc -->
 
+> This document is for a developer transitioning from general object-oriented programming to C++ object-oriented design, with optional exposure to functional-programming ideas, who needs to review and understand production C++ source code with confidence.
+>
+> It is not a full C++ course and not a glossary. It is a fast-track reading guide: enough core concepts and patterns to make real code reviews easier, especially around class design, constructor/destructor behavior, ownership, pointers, references, and modern library usage.
+>
+> The central idea is simple: treat C++ as familiar OOP with explicit lifetime rules. Once you read ownership and object lifecycle correctly, most source code becomes predictable.
+
 ## Table of Contents <!-- omit in toc -->
 
-- [Purpose](#purpose)
 - [0) C++ Language Main Features](#0-c-language-main-features)
   - [Strongly Typed by Design](#strongly-typed-by-design)
   - [Declaration Before Use: First Reading Rule](#declaration-before-use-first-reading-rule)
@@ -50,7 +55,7 @@
   - [Structured Bindings](#structured-bindings)
   - [`if constexpr`](#if-constexpr)
   - [`std::optional`, `std::variant`, `std::any`](#stdoptional-stdvariant-stdany)
-  - [`std::string_view`](#stdstringview)
+  - [`std::string_view`](#stdstring_view)
   - [`std::filesystem`](#stdfilesystem)
 - [6) C++20: A Second Major Inflection Point](#6-c20-a-second-major-inflection-point)
   - [Concepts and `requires`](#concepts-and-requires)
@@ -85,19 +90,10 @@
   - [Exercise 4: Algorithm Pass](#exercise-4-algorithm-pass)
   - [Exercise 5: Template Pass](#exercise-5-template-pass)
 - [15) Closing Advice for Long-Term Success](#15-closing-advice-for-long-term-success)
-## Purpose
-
-This document is for a developer transitioning from general object-oriented programming to C++ object-oriented design, with optional exposure to functional-programming ideas, who needs to review and understand production C++ source code with confidence.
-
-It is not a full C++ course and not a glossary. It is a fast-track reading guide: enough core concepts and patterns to make real code reviews easier, especially around class design, constructor/destructor behavior, ownership, pointers, references, and modern library usage.
-
-The central idea is simple: treat C++ as familiar OOP with explicit lifetime rules. Once you read ownership and object lifecycle correctly, most source code becomes predictable.
-
----
 
 ## 0) C++ Language Main Features
 
-In large C++ codebases, the most common review-time blocker is the same question: "why does this fail?" The code may look reasonable locally, but failure usually comes from contracts defined outside the current function or file. In practice, this section exists to make that failure pattern predictable.
+In large C++ codebases, the most common review-time blocker is the same question, "why does this fail?" The code may look reasonable locally, but failure usually comes from contracts defined outside the current function or file. In practice, this section exists to make that failure pattern predictable.
 
 Two answers resolve most of these failures in source code:
 
@@ -106,7 +102,7 @@ Two answers resolve most of these failures in source code:
 
 ### Strongly Typed by Design
 
-C++ is type-centric. Every variable, function, and expression has a type contract checked at compile time.
+C++ is type-centric. Every variable, function, and expression has a type contract checked at compile time:
 
 - values are not implicitly interchangeable in many contexts
 - function signatures define exact parameter and return expectations
@@ -116,7 +112,7 @@ C++ is type-centric. Every variable, function, and expression has a type contrac
 > `cv` stands for `const` and `volatile`.
 > `cv-qualifiers` are type qualifiers that add `const` and/or `volatile` constraints, which affect valid operations and overload selection.
 
-Fast reading rule: start by identifying types on function boundaries, then inspect implementation.
+The following block shows how overload resolution follows function boundary types:
 
 ```cpp
 int add(int a, int b);
@@ -128,7 +124,7 @@ add(1.0, 2.0);  // calls double overload
 
 ### Declaration Before Use: First Reading Rule
 
-In C++, a variable, type, or function must be declared before any use that requires compiler knowledge of it.
+In C++, a variable, type, or function must be declared before any use that requires compiler knowledge of it. The following block shows what happens when that declaration is not visible yet:
 
 ```cpp
 int main()
@@ -142,7 +138,7 @@ int multiply(int a, int b)
 }
 ```
 
-Fixed with a forward declaration:
+The following block shows the same example fixed with a forward declaration:
 
 ```cpp
 int multiply(int a, int b); // declaration first
@@ -160,7 +156,7 @@ int multiply(int a, int b)
 
 ### Forward Declarations and References Across Files
 
-Forward declarations let you reference a type without including its full definition immediately.
+Forward declarations let you reference a type without including its full definition immediately. The following block shows a forward declaration and a function that can accept an incomplete type by reference:
 
 ```cpp
 class Engine; // forward declaration
@@ -168,7 +164,7 @@ class Engine; // forward declaration
 void inspect(const Engine& e); // allowed: reference to incomplete type
 ```
 
-Practical review benefit:
+Practical review benefits include the following:
 
 - smaller headers
 - fewer rebuild cascades
@@ -178,16 +174,16 @@ You usually need the full type definition only when accessing members, allocatin
 
 ### C++ File Anatomy
 
-The two ideas above explain the usual C++ file layout: declarations must be visible before use, and the compiler needs enough type information at the point of use. That is why many projects split code across headers and implementation files, while some small libraries keep everything in headers.
+The two ideas above explain the usual C++ file layout. Declarations must be visible before use, and the compiler needs enough type information at the point of use. That is why many projects split code across headers and implementation files, while some small libraries keep everything in headers.
 
 #### Header File and Implementation File
 
-The normal structure is:
+The normal structure is the following:
 
 - header file (`.h`, `.hpp`): declares the interface
 - implementation file (`.cpp`): defines the functions and methods
 
-Example:
+The following header/source pair shows this structure:
 
 `widget.h`
 
@@ -221,7 +217,7 @@ void Widget::render() const
 }
 ```
 
-How to read this structure:
+Read this structure as follows:
 
 - the header tells you what the type promises
 - the implementation file tells you how it fulfills that promise
@@ -230,7 +226,7 @@ How to read this structure:
 
 #### Header-Only Project
 
-A header-only project keeps declarations and definitions in header files. This is common for templates and small reusable utilities.
+A header-only project keeps declarations and definitions in header files. This is common for templates and small reusable utilities. The following block shows a simple header-only template:
 
 ```cpp
 #pragma once
@@ -242,19 +238,19 @@ T square(T value)
 }
 ```
 
-Why header-only is used:
+Header-only design is used for a few common reasons:
 
 - templates usually must be fully visible where they are instantiated
 - small utilities are easier to distribute as a single header
 - it can simplify build setup for small libraries
 
-Tradeoffs:
+This approach has tradeoffs:
 
 - more code is visible to every file that includes the header
 - compile times can grow as headers get larger
 - implementation details are harder to hide
 
-Reading rule: if the project is header-only, expect more inline function definitions and more template code directly in headers. If it uses headers plus `.cpp` files, expect a clearer interface/implementation split.
+If the project is header-only, expect more inline function definitions and more template code directly in headers. If it uses headers plus `.cpp` files, expect a clearer interface/implementation split.
 
 ---
 
@@ -262,7 +258,7 @@ Reading rule: if the project is header-only, expect more inline function definit
 
 If you are moving from general OOP into C++, class structure and interfaces will still feel familiar. The key difference is that lifetime, ownership, and type intent are explicit in code and must be read intentionally.
 
-In this guide, these terms mean:
+In this guide, these terms mean the following:
 
 - Lifetime: when an object is created, how long it stays valid, and when it is destroyed.
 - Ownership: which object or scope is responsible for releasing a resource.
@@ -272,7 +268,7 @@ Modern C++ did not change those fundamentals. It gave clearer language and libra
 
 ### C++ Built-in Types
 
-Before user-defined types, C++ gives core built-in types that appear everywhere in source code reviews.
+Before user-defined types, C++ gives core built-in types that appear everywhere in source code reviews. The following block shows common built-in forms:
 
 ```cpp
 bool ok = true;
@@ -284,7 +280,7 @@ double score = 99.8;
 void* raw = nullptr;
 ```
 
-Reading model for built-in types:
+Use this reading model for built-in types:
 
 - integral types (`short`, `int`, `long`, `long long`, signed/unsigned forms) represent whole numbers
 - floating-point types (`float`, `double`, `long double`) represent decimal values with precision tradeoffs
@@ -296,7 +292,7 @@ In production code, most interfaces combine built-in and user-defined types. Rea
 
 ### Introducing Types in C++
 
-The core language options are:
+The core language options are the following:
 
 - `struct`
 - `class`
@@ -311,10 +307,12 @@ The core language options are:
 - `struct`: members and inheritance are `public` by default
 - `class`: members and inheritance are `private` by default
 
-Use guide in real code reviews:
+In real code reviews, use this guide:
 
 - use `struct` for simple data carriers and value objects with mostly public state
 - use `class` for behavior-centric types with encapsulation boundaries
+
+A simple contrast appears in the following block:
 
 ```cpp
 struct Point
@@ -337,7 +335,7 @@ private:
 
 #### `union`: One Storage Region, Multiple Interpretations
 
-A `union` stores different fields in the same memory location, one active member at a time.
+A `union` stores different fields in the same memory location, one active member at a time. The following block shows a minimal union:
 
 ```cpp
 union NumberView
@@ -351,7 +349,7 @@ Use it when memory layout control is required. In most application code, prefer 
 
 #### `enum` and `enum class`: Named Constant Sets
 
-`enum` creates named constants. `enum class` is strongly scoped and avoids accidental implicit conversions.
+`enum` creates named constants. `enum class` is strongly scoped and avoids accidental implicit conversions. The following block shows both forms:
 
 ```cpp
 enum OldState { idle, running };
@@ -360,11 +358,11 @@ enum class State { Idle, Running };
 State s = State::Idle; // scoped and explicit
 ```
 
-Review preference: prefer `enum class` for modern code readability and type safety.
+In modern code reviews, prefer `enum class` for readability and type safety.
 
 #### Template Types: Type Families
 
-Templates define type families, not just one concrete type.
+Templates define type families, not just one concrete type. The following block shows one template instantiated with two different element types:
 
 ```cpp
 template <typename T>
@@ -381,7 +379,7 @@ Use this model when one design should work for many element types. For fast code
 
 #### Type Aliases with `using` and `typedef`
 
-Aliases give existing types better names. They do not create a brand-new distinct runtime type.
+Aliases give existing types better names. They do not create a brand-new distinct runtime type. The following block shows both alias styles:
 
 ```cpp
 using UserId = std::uint64_t;
@@ -392,7 +390,7 @@ typedef std::vector<std::string> StringList;
 
 ### C++ String Handling
 
-C++ projects usually mix several string styles. Reading code becomes easier when you identify ownership and mutability first.
+C++ projects usually mix several string styles. Reading code becomes easier when you identify ownership and mutability first. The following block shows common string representations with different ownership models:
 
 ```cpp
 const char* c_text = "hello";           // C-style string (null-terminated)
@@ -400,20 +398,20 @@ std::string text = "hello";             // owning dynamic string
 std::string_view view = text;            // non-owning read-only view
 ```
 
-Common methods of string handling in C++:
+C++ string handling commonly appears in these forms:
 
 - `const char*` / `char*`: C-style strings, common in legacy APIs and interop code.
 - `std::string`: default modern choice for owned and mutable text.
 - `std::string_view`: lightweight read-only view when you do not need ownership.
 - string literals (`"..."`, `R"(...)"`): compile-time text constants.
 
-Practical reading tips:
+Use these practical reading tips:
 
 - if a function takes `std::string_view`, it usually reads text only
 - if a function takes `std::string` by value, it may store or move ownership
 - if you see `char*`, check whether code expects writable buffers
 
-Example API shapes:
+The following block shows common API shapes:
 
 ```cpp
 void log_line(std::string_view line);        // read-only, non-owning
@@ -425,7 +423,7 @@ void fill_buffer(char* out, std::size_t n);  // writable C-style buffer
 
 #### Class Reading Model: Objects, Constructors, and Destructors
 
-For source-code reading, start from class lifecycle before algorithm details. In most C++ projects, understanding construction and destruction rules explains more bugs than reading the method bodies first.
+For source-code reading, start from class lifecycle before algorithm details. In most C++ projects, understanding construction and destruction rules explains more bugs than reading the method bodies first. The following class sketch shows the main constructor and destructor forms you should recognize:
 
 ```cpp
 class Session
@@ -447,7 +445,7 @@ private:
 };
 ```
 
-How to read constructor/destructor types quickly:
+Read constructor/destructor types quickly this way:
 
 - default constructor creates an object with default state
 - value constructor initializes from explicit inputs
@@ -455,7 +453,7 @@ How to read constructor/destructor types quickly:
 - move constructor builds a new object by transferring resources from an rvalue
 - destructor releases resources at end of lifetime
 
-Call-site mapping:
+The following block shows those mappings at call sites:
 
 ```cpp
 Session a;                        // default constructor
@@ -464,7 +462,7 @@ Session c = b;                    // copy constructor
 Session d = std::move(b);         // move constructor
 ```
 
-Other constructor forms you will frequently see in production code:
+The following block shows other constructor forms you will frequently see in production code:
 
 ```cpp
 class Config
@@ -483,13 +481,13 @@ private:
 };
 ```
 
-Reading rule for these forms:
+Read these forms this way:
 
 - `= default` means compiler-generated behavior is intended
 - `= delete` means that operation is intentionally forbidden
 - delegating constructors centralize initialization logic and reduce duplication
 
-Two practical notes for code review:
+Two practical notes for code review are important:
 
 - a single-parameter constructor should often be `explicit` to avoid accidental implicit conversions
 - if a class owns resources directly, copy/move/destructor behavior must form one coherent contract
@@ -500,8 +498,8 @@ When class members are RAII types (`std::string`, `std::vector`, `std::unique_pt
 
 If there is one subject to re-master before anything else, it is object lifetime and ownership.
 
-Object lifetime answers: when is an object created and when is it destroyed?
-Ownership answers: who is responsible for destroying the resource owned by that object?
+Object lifetime tells you when an object is created and when it is destroyed.
+Ownership tells you who is responsible for destroying the resource owned by that object.
 
 Most hard C++ bugs still come from weak ownership models:
 
@@ -510,7 +508,7 @@ Most hard C++ bugs still come from weak ownership models:
 - dangling references
 - hidden shared ownership
 
-Modern C++ expects ownership to be explicit in types and APIs.
+Modern C++ expects ownership to be explicit in types and APIs:
 
 - value types (`std::string`, `std::vector`) own their data
 - `std::unique_ptr<T>` expresses unique ownership
@@ -521,7 +519,7 @@ If you keep ownership clear, the rest of modern C++ becomes much easier.
 
 ##### Why Raw Pointer Ownership Causes Problems
 
-Raw pointers are not inherently bad. The problem appears when raw pointers are used to represent ownership, because the type `T*` does not answer key questions:
+Raw pointers are not inherently bad. The problem appears when raw pointers are used to represent ownership, because the type `T*` does not answer key questions.
 
 - Who owns this object?
 - Who must delete it?
@@ -530,7 +528,7 @@ Raw pointers are not inherently bad. The problem appears when raw pointers are u
 
 When those rules are undocumented or inconsistent, common bugs appear.
 
-Example 1: memory leak through forgotten delete
+The following block shows a memory leak through forgotten delete:
 
 ```cpp
 Widget* create_widget()
@@ -546,7 +544,7 @@ Widget* create_widget()
 
 The issue is not syntax. The issue is ownership tracking during control-flow changes.
 
-Resolved with `std::unique_ptr`:
+The following block shows the same flow resolved with `std::unique_ptr`:
 
 ```cpp
 std::unique_ptr<Widget> create_widget()
@@ -560,7 +558,7 @@ std::unique_ptr<Widget> create_widget()
 }
 ```
 
-Example 2: double delete from ambiguous ownership
+The following block shows a double delete caused by ambiguous ownership:
 
 ```cpp
 void set_widget(Widget* w)
@@ -577,7 +575,7 @@ void clear_widget()
 
 If caller also deletes `w`, you get double delete. If caller assumes callee deletes and callee does not, you get leak. Raw pointer type does not make the contract explicit.
 
-Resolved with explicit unique ownership:
+The following block shows the same situation resolved with explicit unique ownership:
 
 ```cpp
 void set_widget(std::unique_ptr<Widget> w)
@@ -593,7 +591,7 @@ void clear_widget()
 
 Now ownership transfer is part of the function signature.
 
-Example 3: use-after-free in shared access
+The following block shows use-after-free in shared access:
 
 ```cpp
 Widget* w = new Widget();
@@ -603,7 +601,7 @@ delete w; // callback now holds dangling pointer
 
 If callbacks or subsystems share lifetime, manual lifetime coordination is fragile.
 
-Resolved with shared ownership and safe observation:
+The following block shows the same situation resolved with shared ownership and safe observation:
 
 ```cpp
 auto w = std::make_shared<Widget>();
@@ -622,39 +620,39 @@ With `weak_ptr`, callback code can safely check whether object lifetime is still
 
 ##### How Smart Pointers Fix Ownership Issues
 
-`std::unique_ptr<T>`:
+`std::unique_ptr<T>` has these properties:
 
 - one owner
 - no accidental copy of ownership
 - automatic destruction at scope end
 - explicit ownership transfer via `std::move`
 
-`std::shared_ptr<T>`:
+`std::shared_ptr<T>` has these properties:
 
 - shared ownership
 - automatic destruction when last owner disappears
 - useful for graph-like or callback-driven lifetimes
 
-`std::weak_ptr<T>`:
+`std::weak_ptr<T>` has these properties:
 
 - non-owning reference to a `shared_ptr`-managed object
 - avoids cycles and use-after-free in observers
 - safe access through `lock()`
 
-Practical modern rule:
+Use this practical modern rule:
 
 - Use raw pointers and references for non-owning access.
 - Use `unique_ptr` by default for ownership.
 - Use `shared_ptr` only when ownership is truly shared.
 - Use `weak_ptr` for observers of shared lifetime.
 
-What non-owning access means in practice:
+In practice, non-owning access means the following:
 
 - the function can use the object
 - the function must not delete or free the object
 - lifetime remains the caller or owner responsibility
 
-Example A: non-owning reference (cannot be null)
+The following block shows a non-owning reference that cannot be null:
 
 ```cpp
 void print_title(const Document& doc)
@@ -665,7 +663,7 @@ void print_title(const Document& doc)
 
 `print_title` only observes `doc`; it does not own `doc` and cannot destroy it.
 
-Example B: non-owning raw pointer observer (can be null)
+The following block shows a non-owning raw pointer observer that can be null:
 
 ```cpp
 void maybe_tick(Widget* w)
@@ -679,7 +677,7 @@ void maybe_tick(Widget* w)
 
 `maybe_tick` can use `w` if present, but it must never call `delete w` because it is not the owner.
 
-Pointer-to-pointer appears in legacy code and C APIs:
+The following block shows pointer-to-pointer style from legacy code and C APIs:
 
 ```cpp
 void replace_widget(Widget** slot, Widget* next)
@@ -690,7 +688,7 @@ void replace_widget(Widget** slot, Widget* next)
 
 When reading this style, `Widget**` usually means "this function can rebind the caller's pointer". In modern C++, this is often replaced with references or smart-pointer parameters for clarity.
 
-Quick mapping for common signatures during code review:
+This quick mapping helps during code review:
 
 - `T*` or `const T*`: non-owning, nullable access
 - `T&` or `const T&`: non-owning, non-null access
@@ -698,10 +696,12 @@ Quick mapping for common signatures during code review:
 - `std::unique_ptr<T>&`: modify current owner without transfer
 - `std::shared_ptr<T>` by value: shared ownership participation
 
-References and reference-of-reference note:
+Keep this note in mind for references and reference-of-reference behavior:
 
 - direct reference-to-reference declarations are not allowed in source code (`T& &`)
 - in templates, reference collapsing rules apply and are common in forwarding code
+
+The following block shows a typical forwarding-reference helper:
 
 ```cpp
 template <typename T>
@@ -711,7 +711,7 @@ void relay(T&& value) // forwarding reference
 }
 ```
 
-Practical reading rule:
+Use this practical reading rule:
 
 - if `T` is deduced as `U&`, then `T&&` becomes `U&`
 - if `T` is deduced as `U`, then `T&&` stays `U&&`
@@ -720,14 +720,14 @@ You do not need to memorize all template details for review work. Just remember 
 
 #### Const Correctness
 
-`const` is still central to clean API design. It communicates intent and enables compiler checks.
+`const` is still central to clean API design. It communicates intent and enables compiler checks:
 
 - `const T&` means read-only reference access
 - `T* const` means pointer value cannot change
 - `const T*` means pointed-to value cannot change through that pointer
 - `const` member functions promise not to mutate logical object state
 
-Good const usage improves readability and maintainability. It is not just a style preference.
+Good const usage improves readability and maintainability. It is not just a style preference. The following block shows a typical const-qualified accessor:
 
 ```cpp
 class Report
@@ -744,7 +744,7 @@ private:
 
 RAII is still one of the most important C++ design principles.
 
-The idea is simple: tie resource lifetime to object lifetime. Acquire in construction, release in destruction.
+Tie resource lifetime to object lifetime. Acquire in construction, and release in destruction. The following block shows that pattern in a small RAII wrapper:
 
 ```cpp
 #include <cstdio>
@@ -795,7 +795,7 @@ void save_log(bool dry_run)
 }
 ```
 
-This is RAII in practice: constructor acquires, destructor releases. Even with early return or exceptions, cleanup still happens because object lifetime is tied to scope.
+In RAII practice, the constructor acquires and the destructor releases. Even with early return or exceptions, cleanup still happens because object lifetime is tied to scope.
 
 #### Separation of Interface and Implementation
 
@@ -806,7 +806,7 @@ Separation of interface and implementation is still one of the most practical C+
 
 The interface should be stable and minimal. The implementation can change freely as long as the interface contract remains valid.
 
-Why this matters in real projects:
+This matters in real projects for several reasons:
 
 - Faster builds: fewer includes and less recompilation ripple.
 - Easier maintenance: internal changes do not force caller changes.
@@ -816,7 +816,7 @@ Why this matters in real projects:
 
 ##### Example 1: Classic Header/Source Split
 
-Interface (`config_parser.h`):
+The following header block shows the public interface (`config_parser.h`):
 
 ```cpp
 #pragma once
@@ -832,7 +832,7 @@ public:
 };
 ```
 
-Implementation (`config_parser.cpp`):
+The following source block shows one possible implementation (`config_parser.cpp`):
 
 ```cpp
 #include "config_parser.h"
@@ -880,14 +880,14 @@ Even in this simple form, callers only see parser behavior. They do not depend o
 
 For stronger implementation hiding, use the pImpl (pointer-to-implementation) pattern.
 
-How hiding happens in this pattern:
+Hiding happens in this pattern as follows:
 
 1. The header only forward-declares `Impl` and stores `std::unique_ptr<Impl>`.
 2. The real `Impl` class definition exists only in the `.cpp` file.
 3. Callers can compile and use `Database`, but they cannot see or depend on `Impl` members.
 4. You can change `Impl` fields, helper functions, and private includes without changing the public header.
 
-Public interface (`database.h`):
+The following header block shows the public interface (`database.h`):
 
 ```cpp
 #pragma once
@@ -921,7 +921,7 @@ private:
 };
 ```
 
-Implementation (`database.cpp`):
+The following source block shows one possible implementation (`database.cpp`):
 
 ```cpp
 #include "database.h"
@@ -984,26 +984,26 @@ Why no separate include for `Impl` in the header?
 - The full `Impl` definition is needed only in the `.cpp`, where `Database` methods are compiled and where destruction is emitted.
 - This is why the header includes only what it needs (`<memory>`, `<string_view>`), while heavier implementation headers stay in the source file.
 
-Compile-time vs link-time view:
+Use this compile-time vs link-time view:
 
 - Compile time (user code including `database.h`): compiler knows `Database` API and that `impl_` points to some hidden type.
 - Compile time (`database.cpp`): compiler sees the real `Database::Impl` layout and compiles the actual behavior.
 - Link time: object files are combined so calls to `Database::connect` and `Database::execute` resolve to definitions from `database.cpp`.
 - Result: callers use a stable API while implementation details remain hidden in one translation unit.
 
-What clients see (`database.h`):
+Clients see this in `database.h`:
 
 - class `Database`
 - public functions `connect` and `execute`
 - a pointer-sized private field (`impl_`)
 
-What clients do not see:
+Clients do not see the following details:
 
 - `std::string uri_`
 - logging or retry helpers
 - low-level backend headers (network/database driver headers)
 
-Concrete maintenance benefit:
+A concrete maintenance benefit is the following:
 
 - Today `Impl` stores `uri_` and prints to stdout.
 - Tomorrow `Impl` can switch to a connection pool, add caching, and include heavy backend headers.
@@ -1031,6 +1031,8 @@ Template fundamentals are still required knowledge:
 
 What changed in modern C++ is not that old template knowledge became wrong, but that constraints and helper utilities became better. C++20 concepts are an evolution of this foundation, not a replacement.
 
+The following block shows a small template example:
+
 ```cpp
 template <typename T>
 T max_of(T a, T b)
@@ -1043,7 +1045,7 @@ T max_of(T a, T b)
 
 Containers and algorithms remain at the center of idiomatic C++.
 
-The modern style is to prefer standard containers and algorithms first, and only drop to lower-level manual handling when profiling proves it is necessary.
+The modern style is to prefer standard containers and algorithms first, and only drop to lower-level manual handling when profiling proves it is necessary. The following block shows that baseline style:
 
 ```cpp
 std::vector<int> values{4, 1, 9, 2};
@@ -1061,6 +1063,8 @@ Good modern practice keeps error strategy explicit:
 - use exceptions for truly exceptional failures
 - use `std::optional` or `std::expected` for expected failure paths when appropriate
 
+The following block shows an exception-based path:
+
 ```cpp
 Config load_config_or_throw(std::string_view path)
 {
@@ -1074,7 +1078,7 @@ Config load_config_or_throw(std::string_view path)
 
 You do not have to pick one mechanism globally for every function. Choose based on semantics, performance requirements, and project conventions.
 
-A pre-modern function like this is still perfectly valid:
+The following block shows a pre-modern function style that is still perfectly valid:
 
 ```cpp
 void print_value(const std::string& text)
@@ -1099,7 +1103,7 @@ If a class manages a resource manually, and you define one of these three specia
 
 Why? Because a class that owns something usually needs to define how that resource is destroyed, copied, and reassigned.
 
-In review practice, if a resource-owning class manually defines one lifecycle function, verify that copy/move/destruction semantics are all coherent.
+In review practice, if a resource-owning class manually defines one lifecycle function, verify that copy/move/destruction semantics are all coherent. The following block shows a classic Rule of Three class:
 
 ```cpp
 class Buffer
@@ -1146,7 +1150,7 @@ Once C++11 added move semantics, the old three special members were no longer en
 
 Move operations matter because they allow the resource to be transferred instead of copied.
 
-Using the same `Buffer` example, the two missing parts are the move constructor and move assignment operator:
+Using the same `Buffer` example, the following block adds the two missing move operations:
 
 ```cpp
 Buffer(Buffer&& other) noexcept : data(other.data), size(other.size)
@@ -1175,7 +1179,9 @@ These two functions let ownership move from one `Buffer` object to another witho
 
 This is the modern preferred direction. Instead of writing special member functions yourself, structure the class so the members already know how to manage themselves.
 
-That usually means using RAII types such as `std::string`, `std::vector`, `std::unique_ptr`, and similar library types.
+Rule of Zero design is most practical from C++11 onward, because move semantics and RAII-focused standard types (including `std::unique_ptr`) make resource-safe classes possible without manual special-member code. C++14 then improves day-to-day usage with `std::make_unique`.
+
+That usually means using RAII types such as `std::string`, `std::vector`, `std::unique_ptr`, and similar library types. The following block shows a Rule of Zero version:
 
 ```cpp
 class Buffer
@@ -1200,13 +1206,13 @@ The main shift is not syntax. The shift is design philosophy.
 
 Older C++ code often relied on manual conventions. Modern C++ prefers "expressed correctness," where ownership, optionality, and constraints are visible in types and interfaces.
 
-For an experienced OOP engineer, the key mindset differences when reading C++ are:
+For an experienced OOP engineer, the key mindset differences when reading C++ are the following:
 
 - C++ frequently uses value objects instead of always heap objects
 - copy vs move is explicit in type operations and function signatures
 - destructor timing is deterministic (scope-based), not garbage-collector-driven
 
-Compare the intent in these two interfaces:
+The following block compares the intent in two interface styles:
 
 ```cpp
 // Older style
@@ -1231,7 +1237,7 @@ C++11 is the practical baseline for understanding modern C++ code in active proj
 
 ### `auto` and Type Deduction
 
-Before C++11, verbose iterator and template types made code noisy. `auto` lets the compiler infer obvious types so the code can focus on meaning.
+Before C++11, verbose iterator and template types made code noisy. `auto` lets the compiler infer obvious types so the code can focus on meaning. The following block shows the basic pattern:
 
 ```cpp
 auto it = users.begin();
@@ -1242,7 +1248,7 @@ Good modern usage is not "use `auto` everywhere." It is "use `auto` where explic
 
 ### `nullptr` and Type Safety
 
-Using `0` or `NULL` for pointers was always a compromise. `nullptr` removes ambiguity and improves overload resolution.
+Using `0` or `NULL` for pointers was always a compromise. `nullptr` removes ambiguity and improves overload resolution. The following block shows the direct form:
 
 ```cpp
 int* p = nullptr;
@@ -1250,7 +1256,7 @@ int* p = nullptr;
 
 ### Range-Based `for`
 
-The language now directly supports element-focused loops.
+The language now directly supports element-focused loops. The following block shows a range-based loop:
 
 ```cpp
 for (const auto& user : users)
@@ -1263,7 +1269,7 @@ This is not just shorter. It reduces iterator boilerplate and focuses on intent.
 
 ### Lambdas
 
-In older C++, tiny one-use callable logic often required named functors. Lambdas make local behavior easy to write and keep nearby.
+In older C++, tiny one-use callable logic often required named functors. Lambdas make local behavior easy to write and keep nearby. The following block shows a common local lambda:
 
 ```cpp
 std::sort(values.begin(), values.end(),
@@ -1272,7 +1278,7 @@ std::sort(values.begin(), values.end(),
 
 ### Move Semantics
 
-This is one of the most important conceptual changes in all modern C++. With moves, expensive objects can transfer resources instead of deep-copying them.
+This is one of the most important conceptual changes in all modern C++. With moves, expensive objects can transfer resources instead of deep-copying them. The following block shows a simple return path where move or elision applies:
 
 ```cpp
 std::vector<int> make_values()
@@ -1300,7 +1306,7 @@ The key modern practice is to use raw pointers for non-owning observation and sm
 
 C++14 improved ergonomics more than architecture.
 
-Generic lambdas made it easier to write local generic behavior:
+The following block shows how generic lambdas made local generic behavior easier to write:
 
 ```cpp
 auto add = [](auto x, auto y)
@@ -1309,7 +1315,7 @@ auto add = [](auto x, auto y)
 };
 ```
 
-`std::make_unique` removed a practical gap from C++11 and made unique ownership creation simpler and exception-safe.
+`std::make_unique` removed a practical gap from C++11 and made unique ownership creation simpler and exception-safe. The following block shows the direct usage:
 
 ```cpp
 auto session = std::make_unique<Session>();
@@ -1325,7 +1331,7 @@ For many teams, C++17 became the first "comfortable modern" target.
 
 ### Structured Bindings
 
-Instead of awkward tuple accessors, you can bind names directly:
+The following block shows how structured bindings let you name tuple-like results directly:
 
 ```cpp
 auto [host, port] = read_endpoint();
@@ -1333,7 +1339,7 @@ auto [host, port] = read_endpoint();
 
 ### `if constexpr`
 
-Template code became much easier to read:
+The following block shows how `if constexpr` makes template code easier to read:
 
 ```cpp
 template <typename T>
@@ -1360,7 +1366,7 @@ These types remove many older ad-hoc patterns:
 
 ### `std::string_view`
 
-One of the most practical improvements for API design:
+The following block shows one of the most practical improvements for API design:
 
 ```cpp
 void log_line(std::string_view text);
@@ -1376,11 +1382,11 @@ Portable path and file operations moved into the standard library, reducing plat
 
 ## 6) C++20: A Second Major Inflection Point
 
-C++20 is a large standard. For returning developers, three areas matter the most: constraints, ranges, and stronger library utilities.
+C++20 is a large standard. For returning developers, constraints, ranges, and stronger library utilities are the three areas that matter most.
 
 ### Concepts and `requires`
 
-In classic template code, errors were often long and indirect. Concepts let you state requirements directly in the interface.
+In classic template code, errors were often long and indirect. Concepts let you state requirements directly in the interface. The following block shows a constrained template:
 
 ```cpp
 template <typename T>
@@ -1395,7 +1401,7 @@ This improves readability and diagnostics.
 
 ### Ranges
 
-Ranges make algorithm pipelines expressive and composable:
+Ranges make algorithm pipelines expressive and composable. The following block shows a small ranges pipeline:
 
 ```cpp
 auto names = users
@@ -1407,7 +1413,7 @@ You can still use iterators and classic algorithms, but ranges often produce cle
 
 ### `std::span`
 
-`std::span` is a non-owning view over contiguous memory. It is ideal for APIs that should not take ownership:
+`std::span` is a non-owning view over contiguous memory. It is ideal for APIs that should not take ownership. The following block shows a typical signature:
 
 ```cpp
 void normalize(std::span<float> data);
@@ -1417,7 +1423,7 @@ Compared with pointer-plus-length pairs, `span` is safer and clearer.
 
 ### `std::format`
 
-Formatting becomes cleaner and type-safe:
+The following block shows cleaner, type-safe formatting:
 
 ```cpp
 auto msg = std::format("id={}, score={:.2f}", id, score);
@@ -1425,7 +1431,7 @@ auto msg = std::format("id={}, score={:.2f}", id, score);
 
 ### Coroutines and Modules
 
-Both are important but can be learned later unless your project depends on them immediately.
+Both are important but can be learned later unless your project depends on them immediately:
 
 - Coroutines help with asynchronous and generator-style workflows.
 - Modules aim to improve build and isolation models compared to textual includes.
@@ -1440,7 +1446,7 @@ C++23 is less about big paradigm change and more about making modern C++ workflo
 
 ### `std::expected`
 
-`std::expected<T, E>` is a strong tool for explicit error-return design when exceptions are not your preferred mechanism:
+`std::expected<T, E>` is a strong tool for explicit error-return design when exceptions are not your preferred mechanism. The following block shows a typical signature:
 
 ```cpp
 std::expected<Config, ParseError> load_config(std::string_view path);
@@ -1450,7 +1456,7 @@ This can make control flow and failure handling explicit and test-friendly.
 
 ### `std::print` and `std::println`
 
-Output formatting can be simpler and more direct than stream-heavy code.
+Output formatting can be simpler and more direct than stream-heavy code. The following block shows the direct style:
 
 ```cpp
 std::println("Loaded {} records", count);
@@ -1468,16 +1474,16 @@ Features like `if consteval` and explicit object parameters refine modern metapr
 
 ## 8) Language Features vs Library Features: Why Your Toolchain Matters
 
-A frequent source of confusion in real projects is this: "My compiler says C++20, why does feature X still fail?"
+A frequent source of confusion in real projects is the question, "My compiler says C++20, why does feature X still fail?"
 
-The reason is that support has two layers:
+Support has two layers:
 
 - language support from compiler frontend
 - standard library support from library implementation
 
 For example, concepts are mainly language/frontend territory. `std::format` is mainly library territory. You can have one without full maturity of the other depending on toolchain version.
 
-For the major families:
+The major toolchain families are the following:
 
 - GCC commonly ships with `libstdc++`
 - Clang often uses `libc++`, but can also target `libstdc++`
@@ -1498,13 +1504,13 @@ Most teams work in mixed codebases that contain old and new patterns. A practica
 3. Replace ownership models next.
 4. Introduce algorithm/ranges cleanup later.
 
-For example, an old interface:
+The following block shows an old interface style:
 
 ```cpp
 int find_user(const char* name); // returns -1 if missing
 ```
 
-Can often be upgraded first to:
+The following block shows a practical first upgrade:
 
 ```cpp
 std::optional<int> find_user(std::string_view name);
@@ -1514,7 +1520,7 @@ Without rewriting every internal detail on day one.
 
 ### Replace the Most Risky Patterns First
 
-High-risk legacy patterns usually include:
+High-risk legacy patterns usually include the following:
 
 - owning raw pointers
 - manual `new`/`delete` chains
@@ -1540,9 +1546,9 @@ This path gets you productive quickly while still moving toward modern style.
 
 If you are an experienced multi-language OOP engineer, you are not starting from zero. Most class and interface patterns are familiar.
 
-The part to internalize is explicit lifetime and ownership: constructor/destructor behavior, copy vs move semantics, pointer/reference intent, and when smart pointers express ownership contracts.
+The part to internalize is explicit lifetime and ownership. Focus on constructor/destructor behavior, copy vs move semantics, pointer/reference intent, and when smart pointers express ownership contracts.
 
-The winning mindset for code review is: identify ownership first, identify lifecycle second, then read business logic. Once those two layers are clear, most C++ source code becomes straightforward to reason about.
+The winning code-review mindset is to identify ownership first, identify lifecycle second, and then read business logic. Once those two layers are clear, most C++ source code becomes straightforward to reason about.
 
 ---
 
@@ -1551,6 +1557,8 @@ The winning mindset for code review is: identify ownership first, identify lifec
 To make the transition concrete, this section shows a realistic style shift. The goal is not to claim the old code is "wrong." The goal is to show how modern C++ communicates intent and ownership more clearly.
 
 ### Older Style (Common in C++03-era Code)
+
+The following block shows the older style version:
 
 ```cpp
 int parse_scores(const char* line, int* out_values, int max_values)
@@ -1588,6 +1596,8 @@ This style works, but it mixes many concerns:
 - interface does not describe intent clearly
 
 ### Modernized Style
+
+The following block shows the modernized version:
 
 ```cpp
 std::expected<std::vector<int>, std::string>
@@ -1629,7 +1639,7 @@ The new version changes meaning, not just syntax:
 - errors are explicit and typed (`std::expected`)
 - no external output buffer contract is required
 
-This is the core modern pattern: make ownership and error behavior visible in types.
+The core modern pattern is to make ownership and error behavior visible in types.
 
 ---
 
