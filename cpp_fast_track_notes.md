@@ -262,6 +262,8 @@ This approach has tradeoffs:
 
 If the project is header-only, expect more inline function definitions and more template code directly in headers. If it uses headers plus `.cpp` files, expect a clearer interface/implementation split.
 
+[Back to Table of Contents](#table-of-contents)
+
 ---
 
 ## 1) Core Model: Lifetime, Ownership, and Type Intent
@@ -1251,15 +1253,42 @@ In this version, you do not write destructor, copy, or move operations at all. T
 
 The Rule of Zero is often the best modern design target because it reduces bugs and makes classes easier to maintain.
 
+[Back to Table of Contents](#table-of-contents)
+
 ---
 
 ## 2) Modern C++ Mindset
 
 The main shift is not syntax. The shift is design philosophy.
 
-Older C++ code often relied on manual conventions. Modern C++ prefers "expressed correctness," where ownership, optionality, and constraints are visible in types and interfaces.
+Older C++ code often relied on team discipline and comments to communicate rules that the type system did not enforce. Those manual conventions were common and useful at the time, but they were easy to break during maintenance.
 
-In practical transition work, this means reading C++ with two parallel questions: what does the interface promise, and what lifetime or ownership model enforces that promise. This approach aligns well with both OOP design reasoning and FP-style emphasis on explicit contracts.
+Typical manual conventions looked like the following:
+
+- ownership was implied by comments around raw pointers, not encoded in parameter types
+- failure was signaled by sentinel values such as `-1` or `nullptr`, which callers had to remember
+- template constraints were implicit, so invalid types failed with long, indirect compiler errors
+
+Modern C++ keeps the same problem-solving goals but expresses those contracts directly in code:
+
+- `std::unique_ptr` and `std::shared_ptr` express ownership models
+- `std::optional` and `std::expected` express absence and recoverable failure
+- concepts and `requires` express template requirements at the interface
+
+The following block contrasts comment-based conventions with type-level contracts:
+
+```cpp
+// Older style: correctness depends on conventions.
+// caller owns 'name', return -1 means missing user
+int find_user_id(const char* name);
+
+// Modern style: correctness is visible in the interface.
+std::optional<int> find_user_id(std::string_view name);
+```
+
+In the older form, a reader must infer ownership, lifetime, and error protocol from comments or project habits. In the modern form, the function signature itself communicates non-owning input and optional output, so misuse is harder and call sites are easier to reason about.
+
+In practical code work, read interfaces with two questions in mind: what behavior is promised, and what type-level contract enforces lifetime, ownership, and failure semantics. This approach aligns well with both OOP design reasoning and FP-style emphasis on explicit contracts.
 
 For an experienced OOP engineer, the key mindset differences when reading C++ are the following:
 
@@ -1267,22 +1296,9 @@ For an experienced OOP engineer, the key mindset differences when reading C++ ar
 - copy vs move is explicit in type operations and function signatures
 - destructor timing is deterministic (scope-based), not garbage-collector-driven
 
-The following block compares the intent in two interface styles:
+The example above captures the core shift: interfaces communicate intent directly, so callers can reason about behavior from types first and implementation details second.
 
-```cpp
-// Older style
-int find_user_id(const char* name); // -1 means not found?
-
-// Modern style
-std::optional<int> find_user_id(std::string_view name);
-```
-
-The second interface says much more about behavior:
-
-- input is read-only text-like data without forcing allocation
-- output can be "no value" in a type-safe way
-
-This is the style transition you need to internalize.
+[Back to Table of Contents](#table-of-contents)
 
 ---
 
@@ -1355,6 +1371,8 @@ Use ownership types to express intent:
 
 The key modern practice is to use raw pointers for non-owning observation and smart pointers for ownership.
 
+[Back to Table of Contents](#table-of-contents)
+
 ---
 
 ## 4) C++14: C++11, But Smoother
@@ -1377,6 +1395,8 @@ auto session = std::make_unique<Session>();
 ```
 
 Relaxed `constexpr` rules made compile-time functions more practical. In short, C++14 did not redefine style, but it made C++11 code easier to write cleanly.
+
+[Back to Table of Contents](#table-of-contents)
 
 ---
 
@@ -1516,6 +1536,8 @@ std::uintmax_t cpp_size_total(const std::filesystem::path& root)
 }
 ```
 
+[Back to Table of Contents](#table-of-contents)
+
 ---
 
 ## 6) C++20: A Second Major Inflection Point
@@ -1576,6 +1598,8 @@ Both are important but can be learned later unless your project depends on them 
 
 They are powerful, but build-system and toolchain maturity can vary.
 
+[Back to Table of Contents](#table-of-contents)
+
 ---
 
 ## 7) C++23: Maturity and Gap-Filling
@@ -1608,6 +1632,8 @@ For matrix-like or scientific data, `mdspan` provides non-owning multidimensiona
 
 Features like `if consteval` and explicit object parameters refine modern metaprogramming and method expression patterns.
 
+[Back to Table of Contents](#table-of-contents)
+
 ---
 
 ## 8) Language Features vs Library Features: Why Your Toolchain Matters
@@ -1628,6 +1654,8 @@ The major toolchain families are the following:
 - MSVC uses Microsoft STL
 
 So when diagnosing support, check compiler version and standard library version together.
+
+[Back to Table of Contents](#table-of-contents)
 
 ---
 
@@ -1668,6 +1696,8 @@ High-risk legacy patterns usually include the following:
 
 Modernizing those gives the biggest safety and maintenance win.
 
+[Back to Table of Contents](#table-of-contents)
+
 ---
 
 ## 10) Fast-Track Execution Plan (Practical)
@@ -1692,6 +1722,8 @@ Apply this short loop whenever you open unfamiliar C++ code:
 
 This loop turns C++ reading into a consistent process instead of ad-hoc syntax chasing.
 
+[Back to Table of Contents](#table-of-contents)
+
 ---
 
 ## 11) Key Takeaways
@@ -1703,6 +1735,8 @@ The part to internalize is explicit lifetime and ownership. Focus on constructor
 The winning mindset is to identify ownership first, identify lifecycle second, and then read business logic. Once those two layers are clear, most C++ source code becomes straightforward to reason about.
 
 For OOP developers with some FP background, this transition is usually faster than expected. You already know abstraction and composition, and C++ mainly asks you to add precise resource-lifetime reasoning to those existing skills.
+
+[Back to Table of Contents](#table-of-contents)
 
 ---
 
@@ -1794,6 +1828,8 @@ The new version changes meaning, not just syntax:
 - no external output buffer contract is required
 
 The core modern pattern is to make ownership and error behavior visible in types.
+
+[Back to Table of Contents](#table-of-contents)
 
 ---
 
@@ -1979,6 +2015,8 @@ std::string build_message(int id, double score)
 
 This version is less elegant, but it works on older toolchains. In real projects, the right solution is to match the chosen feature set to the actual compiler and standard-library versions in the build environment.
 
+[Back to Table of Contents](#table-of-contents)
+
 ---
 
 ## 14) Practical Exercises (One Weekend Plan)
@@ -2007,6 +2045,8 @@ If you have template helpers, add concepts to the public surface where constrain
 
 By the end of this sequence, the codebase usually feels "modern" without a risky full rewrite.
 
+[Back to Table of Contents](#table-of-contents)
+
 ---
 
 ## 15) Long-Term C++ Growth Advice
@@ -2021,6 +2061,5 @@ When in doubt, ask three design questions:
 
 If your code answers those questions well, you are already writing strong modern C++, even before adopting every new feature in the latest standard.
 
-
-
+[Back to Table of Contents](#table-of-contents)
 
