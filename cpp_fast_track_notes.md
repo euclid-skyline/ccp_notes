@@ -786,6 +786,36 @@ Read constructor/destructor types quickly this way:
 - move constructor builds a new object by transferring resources from an rvalue
 - destructor releases resources at end of lifetime
 
+> [!NOTE]
+> **What lvalue and rvalue mean (and why constructors care)**
+>
+> In practical terms:
+>
+> - an **lvalue** is an expression that refers to a stable named object location (you can usually take its address)
+> - an **rvalue** is a temporary or expiring value expression, typically safe to move from
+>
+> The following block shows common lvalue/rvalue forms:
+>
+> ```cpp
+> std::string name = "alice";       // name is an lvalue
+>
+> std::string a = name;              // name is lvalue -> copy
+> std::string b = std::string("x"); // temporary is rvalue -> move/elide
+> std::string c = name + "_id";      // result temporary is rvalue -> move/elide
+>
+> std::string& lr = name;            // lvalue reference binds to lvalue
+> const std::string& cr = "tmp";    // const lvalue ref can bind to rvalue temporary
+> std::string&& rr = std::string("tmp"); // rvalue reference binds to rvalue
+> ```
+>
+> `std::move(x)` does not move by itself; it converts `x` to an rvalue expression so move constructor/assignment overloads become eligible. After moving, treat the source object as valid but unspecified state.
+>
+> ```cpp
+> std::string src = "payload";
+> std::string dst = std::move(src); // enables move construction
+> // src is still valid, but content is unspecified after move
+> ```
+
 The following block shows those mappings at call sites:
 
 ```cpp
