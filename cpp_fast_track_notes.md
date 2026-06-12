@@ -786,26 +786,55 @@ Read constructor/destructor types quickly this way:
 - move constructor builds a new object by transferring resources from an rvalue
 - destructor releases resources at end of lifetime
 
+The following block shows those mappings at call sites:
+
+```cpp
+Session a;                        // default constructor
+Session b("alice");               // value constructor
+Session c = b;                    // copy constructor
+Session d = std::move(b);         // move constructor
+```
+
 > [!NOTE]
-> **What lvalue and rvalue mean (and why constructors care)**
+> **lvalue and rvalue concepts**
 >
-> In practical terms:
+> The terms come from assignment syntax `a = b`:
 >
-> - an **lvalue** is an expression that refers to a stable named object location (you can usually take its address)
-> - an **rvalue** is a temporary or expiring value expression, typically safe to move from
+> - the left side (`a`) is **lvalue** because it must name a writable object location
+> - the right side (`b`) is **rvalue** because it provides a value to store
 >
-> The following block shows common lvalue/rvalue forms:
+> Modern C++ extends this idea beyond assignment:
+>
+> - an **lvalue** is an expression that identifies a specific object in memory, usually one you can name, reference, or reach through a pointer
+> - an **rvalue** is an expression that produces a temporary value, usually only needed for the current statement or computation
+>
+> The following block shows common lvalue forms, including variable, reference, and pointer cases:
 >
 > ```cpp
-> std::string name = "alice";       // name is an lvalue
+> int x = 42;      // named object -> lvalue
+> int& rx = x;     // reference refers to x (lvalue)
+> int* px = &x;    // pointer to x (lvalue)
+> *px = 100;       // dereferenced pointer is lvalue (assignable)
+> ```
 >
-> std::string a = name;              // name is lvalue -> copy
-> std::string b = std::string("x"); // temporary is rvalue -> move/elide
-> std::string c = name + "_id";      // result temporary is rvalue -> move/elide
+> The following block shows rvalue forms that are temporary or value-only expressions:
 >
-> std::string& lr = name;            // lvalue reference binds to lvalue
-> const std::string& cr = "tmp";    // const lvalue ref can bind to rvalue temporary
-> std::string&& rr = std::string("tmp"); // rvalue reference binds to rvalue
+> ```cpp
+> int y = x + 10;          // x + 10 is rvalue (temporary computed value)
+> float f = 10.5f;         // 10.5f literal is rvalue
+> std::string s = "hello"; // "hello" is used as a temporary value to initialize s
+> ```
+>
+> In a short summary, lvalues are addressable objects, while rvalues are temporary values. Most temporaries are destroyed at the end of the full expression (the statement), unless a lifetime extension rule applies.
+>
+> The following block shows that rule in action:
+>
+> ```cpp
+> const std::string& ref = std::string("hello");
+> // The temporary string lives as long as ref does
+>
+> const int& n = 10 + 5;
+> // The temporary result of 10 + 5 is kept alive by the const reference
 > ```
 >
 > `std::move(x)` does not move by itself; it converts `x` to an rvalue expression so move constructor/assignment overloads become eligible. After moving, treat the source object as valid but unspecified state.
@@ -816,14 +845,7 @@ Read constructor/destructor types quickly this way:
 > // src is still valid, but content is unspecified after move
 > ```
 
-The following block shows those mappings at call sites:
 
-```cpp
-Session a;                        // default constructor
-Session b("alice");              // value constructor
-Session c = b;                    // copy constructor
-Session d = std::move(b);         // move constructor
-```
 
 The following block shows other constructor forms you will frequently see in production code:
 
